@@ -19,16 +19,16 @@ class DatabaseSeeder extends Seeder
                     DB::statement('SET FOREIGN_KEY_CHECKS=0');
                 }
 
-                DB::table('blogs')->truncate();
+                // DB::table('blogs')->truncate();
                 DB::table('categories')->truncate();
                 DB::table('contacts')->truncate();
                 DB::table('countries')->truncate();
                 DB::table('departments')->truncate();
-                DB::table('frequently_asked_question_groups')->truncate();
-                DB::table('frequently_asked_questions')->truncate();
-                DB::table('knowledges')->truncate();
+                // DB::table('frequently_asked_question_groups')->truncate();
+                // DB::table('frequently_asked_questions')->truncate();
+                // DB::table('knowledges')->truncate();
                 DB::table('priorities')->truncate();
-                DB::table('ticket_chat')->truncate();
+                // DB::table('ticket_chat')->truncate();
                 DB::table('ticket_history')->truncate();
                 DB::table('tickets')->truncate();
                 DB::table('types')->truncate();

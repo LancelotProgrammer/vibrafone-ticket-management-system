@@ -9,4 +9,10 @@ use Filament\Resources\Pages\CreateRecord;
 class CreateTicket extends CreateRecord
 {
     protected static string $resource = TicketResource::class;
+
+    protected function mutateFormDataBeforeCreate(array $data): array
+    {
+        $data['customer_user_id'] = auth()->id();
+        return $data;
+    }
 }

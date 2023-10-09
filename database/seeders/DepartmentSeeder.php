@@ -11,6 +11,7 @@ class DepartmentSeeder extends Seeder
     {
         Department::create([
             'title' => 'admin',
+            'code' => 'AD',
             'description' => 'admin',
         ]);
     }

@@ -66,4 +66,9 @@ class Ticket extends Model implements HasMedia
     {
         return $this->belongsTo('App\Models\User', 'high_technical_support_user_id');
     }
+
+    public function ticketHistory()
+    {
+        return $this->hasMany('App\Models\TicketHistory');
+    }
 }

@@ -26,6 +26,9 @@ class DepartmentResource extends Resource
                 Forms\Components\TextInput::make('title')
                     ->required()
                     ->maxLength(64),
+                Forms\Components\TextInput::make('code')
+                    ->required()
+                    ->maxLength(64),
                 Forms\Components\TextInput::make('description')
                     ->maxLength(512),
             ]);
@@ -36,6 +39,8 @@ class DepartmentResource extends Resource
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('title')
+                    ->searchable(),
+                Tables\Columns\TextColumn::make('code')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('description')
                     ->searchable(),
@@ -55,14 +60,14 @@ class DepartmentResource extends Resource
                 Tables\Actions\CreateAction::make(),
             ]);
     }
-    
+
     public static function getRelations(): array
     {
         return [
             //
         ];
     }
-    
+
     public static function getPages(): array
     {
         return [
@@ -70,5 +75,5 @@ class DepartmentResource extends Resource
             'create' => Pages\CreateDepartment::route('/create'),
             'edit' => Pages\EditDepartment::route('/{record}/edit'),
         ];
-    }    
+    }
 }

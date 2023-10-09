@@ -36,7 +36,7 @@ class User extends Authenticatable  implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return $this->blocked_at === null;
+        return is_null($this->blocked_at);
     }
 
     public function country()

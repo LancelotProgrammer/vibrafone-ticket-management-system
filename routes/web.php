@@ -22,3 +22,13 @@ Route::get('/', [HomePageController::class, 'getHomePage']);
 Route::get('/contact', [HomePageController::class, 'getContactPage']);
 
 Route::post('/contact', [HomePageController::class, 'createContact']);
+
+Route::get('/mailable', function () {
+    return new App\Mail\TicketWorkOrder([
+        'email_title' => 'test',
+        'email_body' => 'hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel ',
+        'from' => 'test',
+        'cc' => 'test',
+        'to' => 'test',
+    ]);
+});
