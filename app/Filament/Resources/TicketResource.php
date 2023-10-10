@@ -16,7 +16,9 @@ use App\Models\Priority;
 use App\Models\Ticket;
 use App\Models\Type;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Forms;
+use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
@@ -24,9 +26,14 @@ use Filament\Infolists\Infolist;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Columns\Layout\Split;
+use Filament\Tables\Columns\Layout\Stack;
+use Filament\Tables\Filters\Filter;
+use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class TicketResource extends Resource
 {
@@ -60,29 +67,64 @@ class TicketResource extends Resource
                             ->required()
                             ->maxLength(64),
                         Forms\Components\TextInput::make('title')
+                            ->disabled(function ($record, Page $livewire) {
+                                if ($livewire instanceof EditTicket) {
+                                    return !is_null($record->title);
+                                }
+                            })
                             ->required()
                             ->maxLength(64),
                         Forms\Components\TextInput::make('ne_product')
+                            ->disabled(function ($record, Page $livewire) {
+                                if ($livewire instanceof EditTicket) {
+                                    return !is_null($record->ne_product);
+                                }
+                            })
                             ->required()
                             ->maxLength(64),
                         Forms\Components\TextInput::make('sw_version')
+                            ->disabled(function ($record, Page $livewire) {
+                                if ($livewire instanceof EditTicket) {
+                                    return !is_null($record->sw_version);
+                                }
+                            })
                             ->required()
                             ->maxLength(64),
                         Forms\Components\Textarea::make('description')
+                            ->disabled(function ($record, Page $livewire) {
+                                if ($livewire instanceof EditTicket) {
+                                    return !is_null($record->description);
+                                }
+                            })
                             ->required()
                             ->columnSpanFull()
                             ->maxLength(512),
                         Forms\Components\Section::make('Ticket Meta Data')
                             ->schema([
                                 Forms\Components\Select::make('type_id')
+                                    ->disabled(function ($record, Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return !is_null($record->type_id);
+                                        }
+                                    })
                                     ->required()
                                     ->label('Type')
                                     ->options(Type::all()->pluck('title', 'id')),
                                 Forms\Components\Select::make('priority_id')
+                                    ->disabled(function ($record, Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return !is_null($record->priority_id);
+                                        }
+                                    })
                                     ->required()
                                     ->label('Priority')
                                     ->options(Priority::all()->pluck('title', 'id')),
                                 Forms\Components\Select::make('department_id')
+                                    ->disabled(function ($record, Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return !is_null($record->department_id);
+                                        }
+                                    })
                                     ->required()
                                     ->label('Department')
                                     ->live()
@@ -98,9 +140,31 @@ class TicketResource extends Resource
                                     })
                                     ->options(Department::all()->pluck('title', 'id')),
                                 Forms\Components\Select::make('category_id')
+                                    ->disabled(function ($record, Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return !is_null($record->category_id);
+                                        }
+                                    })
                                     ->required()
                                     ->label('Category')
                                     ->options(Category::all()->pluck('title', 'id')),
+                                Forms\Components\FileUpload::make('attachments')
+                                    ->disabled(function ($record, Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return true;
+                                        }
+                                    })
+                                    ->acceptedFileTypes([
+                                        'application/pdf',
+                                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                        'image/jpeg',
+                                        'image/png',
+                                    ])
+                                    ->downloadable()
+                                    ->multiple()
+                                    ->columnSpanFull(),
+
+
                             ])
                             ->columnSpan(4)
                             ->columns(4),
@@ -170,10 +234,19 @@ class TicketResource extends Resource
                                     ->label('Customer')
                                     ->options(User::all()->pluck('email', 'id')),
                                 Forms\Components\Select::make('technical_support_user_id')
+                                    ->disabled(function ($record) {
+                                        return !is_null($record->technical_support_user_id);
+                                    })
+                                    ->dehydrated(true)
+                                    ->live()
+                                    ->afterStateUpdated(function ($set) {
+                                        $set('start_at', Carbon::now()->toDateTimeString());
+                                    })
                                     ->label('Technical Support')
                                     ->options(User::all()->pluck('email', 'id')),
                                 Forms\Components\Select::make('high_technical_support_user_id')
                                     ->disabled(true)
+                                    ->dehydrated(true)
                                     ->label('High Technical Support')
                                     ->options(User::all()->pluck('email', 'id')),
                             ])
@@ -184,8 +257,12 @@ class TicketResource extends Resource
                                 return $livewire instanceof EditTicket;
                             })
                             ->schema([
-                                Forms\Components\DateTimePicker::make('start_at'),
-                                Forms\Components\DateTimePicker::make('end_at'),
+                                Forms\Components\DateTimePicker::make('start_at')
+                                    ->disabled(true)
+                                    ->dehydrated(true),
+                                Forms\Components\DateTimePicker::make('end_at')
+                                    ->disabled(true)
+                                    ->dehydrated(true),
                             ])
                             ->columnSpan(4)
                             ->columns(2),
@@ -200,23 +277,70 @@ class TicketResource extends Resource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('ticket_identifier'),
-                Tables\Columns\TextColumn::make('title'),
-                Tables\Columns\TextColumn::make('type.title'),
-                Tables\Columns\TextColumn::make('priority.title'),
-                Tables\Columns\TextColumn::make('department.title'),
-                Tables\Columns\TextColumn::make('category.title'),
-                Tables\Columns\TextColumn::make('customer.email'),
-                Tables\Columns\TextColumn::make('technicalSupport.email'),
-                Tables\Columns\TextColumn::make('highTechnicalSupport.email'),
-                Tables\Columns\TextColumn::make('status'),
-                Tables\Columns\TextColumn::make('handler'),
-                Tables\Columns\TextColumn::make('start_at'),
-                Tables\Columns\TextColumn::make('end_at'),
-                Tables\Columns\TextColumn::make('deleted_at'),
+                Split::make([
+                    Stack::make([
+                        Tables\Columns\TextColumn::make('ticket_identifier')
+                            ->icon('heroicon-m-identification'),
+                    ]),
+                    Split::make([
+                        Tables\Columns\TextColumn::make('department.title')
+                            ->icon('heroicon-m-building-office'),
+                        Tables\Columns\TextColumn::make('priority.title')
+                            ->icon('heroicon-m-information-circle'),
+                        Tables\Columns\TextColumn::make('type.title')
+                            ->icon('heroicon-m-hashtag'),
+                        Tables\Columns\TextColumn::make('category.title')
+                            ->icon('heroicon-m-cog-8-tooth'),
+                    ]),
+                    Stack::make([
+                        Tables\Columns\TextColumn::make('status')
+                            ->icon('heroicon-m-wrench'),
+                        Tables\Columns\TextColumn::make('handler')
+                            ->icon('heroicon-m-tag'),
+                    ]),
+                    Stack::make([
+                        Tables\Columns\TextColumn::make('customer.email')
+                            ->icon('heroicon-m-user-circle'),
+                        Tables\Columns\TextColumn::make('technicalSupport.email')
+                            ->icon('heroicon-m-user-group'),
+                        Tables\Columns\TextColumn::make('highTechnicalSupport.email')
+                            ->icon('heroicon-m-user-plus'),
+                    ]),
+                ]),
             ])
             ->filters([
-                //
+                SelectFilter::make('handler')
+                    ->options([
+                        TicketHandler::CUSTOMER->value => 'Customer',
+                        TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
+                        TicketHandler::HIGH_LEVEL_SUPPORT->value => 'High level support',
+                    ]),
+                SelectFilter::make('status')
+                    ->options([
+                        TicketStatus::IN_PROGRESS->value => 'In Progress',
+                        TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
+                        TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
+                        TicketStatus::CLOSED->value => 'Closed',
+                        TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value => 'Hight Level Support Pending',
+                        TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'Technical Support Pending',
+                        TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
+                    ]),
+                Filter::make('created_at')
+                    ->form([
+                        DatePicker::make('created_from'),
+                        DatePicker::make('created_until'),
+                    ])
+                    ->query(function (Builder $query, array $data): Builder {
+                        return $query
+                            ->when(
+                                $data['created_from'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '>=', $date),
+                            )
+                            ->when(
+                                $data['created_until'],
+                                fn (Builder $query, $date): Builder => $query->whereDate('created_at', '<=', $date),
+                            );
+                    })
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),
@@ -225,6 +349,7 @@ class TicketResource extends Resource
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
                     Tables\Actions\DeleteBulkAction::make(),
+                    ExportBulkAction::make(),
                 ]),
             ])
             ->emptyStateActions([

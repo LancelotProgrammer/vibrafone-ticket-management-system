@@ -16,6 +16,7 @@ use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Illuminate\Support\Facades\Mail;
 
@@ -30,6 +31,9 @@ class EditTicket extends EditRecord
             Actions\Action::make('esclate_ticket')
                 ->visible(function (Ticket $record) {
                     if (!is_null($record->deleted_at)) {
+                        return false;
+                    }
+                    if ($record->status == TicketStatus::CLOSED->value) {
                         return false;
                     }
                     return is_null($record->high_technical_support_user_id) && !is_null($record->technical_support_user_id);
@@ -53,6 +57,9 @@ class EditTicket extends EditRecord
                     if (!is_null($record->deleted_at)) {
                         return false;
                     }
+                    if ($record->status == TicketStatus::CLOSED->value) {
+                        return false;
+                    }
                     return !is_null($record->technical_support_user_id);
                 })
                 ->form([
@@ -63,40 +70,60 @@ class EditTicket extends EditRecord
                                 ->live()
                                 ->afterStateUpdated(function ($record, $state, $set) {
                                     if (is_null($state)) {
-                                        $set('email_title', null);
                                         $set('title', null);
+                                        $set('email_title', null);
+                                        $set('email_body', null);
+                                        $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
                                     }
                                     if ($state == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
-                                        $set('email_title', null);
                                         $set('title', null);
+                                        $set('email_title', null);
                                     }
                                     if ($state == TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value) {
-                                        $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
+                                        $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                     }
                                     if ($state == TicketWorkOrder::CUSTOMER_RESPONSE->value) {
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('email_title', null);
+                                        $set('email_body', null);
+                                        $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
                                     }
                                     if ($state == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value) {
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('email_title', null);
+                                        $set('email_body', null);
+                                        $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
                                     }
                                     if ($state == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value) {
-                                        $set('email_title', null);
                                         $set('title', null);
+                                        $set('email_title', null);
                                     }
                                     if ($state == TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
-                                        $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
+                                        $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                     }
                                     if ($state == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('email_title', null);
+                                        $set('email_body', null);
+                                        $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
                                     }
                                     if ($state == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value) {
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('email_title', null);
+                                        $set('email_body', null);
+                                        $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
                                     }
                                 })
                                 ->options(function ($record) {
@@ -116,6 +143,9 @@ class EditTicket extends EditRecord
                                                 TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
                                                 TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
                                                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
+                                            ],
+                                            'Customer' => [
+                                                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
                                             ],
                                         ];
                                     }
@@ -163,9 +193,6 @@ class EditTicket extends EditRecord
                                     Textarea::make('body')
                                         ->required()
                                         ->maxLength(255),
-                                    TextInput::make('url')
-                                        ->required()
-                                        ->maxLength(255),
                                 ])
                                 ->columnSpan(1)
                                 ->columns(1),
@@ -196,6 +223,7 @@ class EditTicket extends EditRecord
                                             };
                                         }),
                                     TextInput::make('from')
+                                        ->live()
                                         ->email()
                                         ->required(function ($get) {
                                             return match ($get('work_order')) {
@@ -207,6 +235,7 @@ class EditTicket extends EditRecord
                                             };
                                         }),
                                     TextInput::make('cc')
+                                        ->live()
                                         ->email()
                                         ->required(function ($get) {
                                             return match ($get('work_order')) {
@@ -218,6 +247,7 @@ class EditTicket extends EditRecord
                                             };
                                         }),
                                     TextInput::make('to')
+                                        ->live()
                                         ->email()
                                         ->required(function ($get) {
                                             return match ($get('work_order')) {
@@ -235,67 +265,89 @@ class EditTicket extends EditRecord
                         ->columns(2),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    $record->work_order = $data['work_order'];
-                    $record->sub_work_order = $data['sub_work_order'];
                     if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
                         if ($data['sub_work_order'] == TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value) {
-                            $record->status = TicketStatus::CUSTOMER_PENDING;
-                            $record->handler = TicketHandler::CUSTOMER;
+                            $record->status = TicketStatus::CUSTOMER_PENDING->value;
+                            $record->handler = TicketHandler::CUSTOMER->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = $data['sub_work_order'];
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
                         if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value) {
-                            $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING;
-                            $record->handler = TicketHandler::CUSTOMER;
+                            $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                            $record->handler = TicketHandler::CUSTOMER->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = $data['sub_work_order'];
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
                         if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
-                            $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING;
-                            $record->handler = TicketHandler::CUSTOMER;
+                            $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                            $record->handler = TicketHandler::CUSTOMER->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = $data['sub_work_order'];
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
                     }
                     if ($data['work_order'] == TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value) {
-                        $record->status = TicketStatus::IN_PROGRESS;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                        $record->status = TicketStatus::IN_PROGRESS->value;
+                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                        $record->work_order = $data['work_order'];
+                        $record->sub_work_order = null;
                         Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                     }
                     if ($data['work_order'] == TicketWorkOrder::CUSTOMER_RESPONSE->value) {
-                        $record->status = TicketStatus::IN_PROGRESS;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                        $record->status = TicketStatus::IN_PROGRESS->value;
+                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                        $record->work_order = $data['work_order'];
+                        $record->sub_work_order = null;
                     }
                     if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value) {
-                        $record->status = TicketStatus::CLOSED;
-                        $record->handler = TicketHandler::CUSTOMER;
+                        $record->status = TicketStatus::CLOSED->value;
+                        $record->handler = TicketHandler::CUSTOMER->value;
+                        $record->work_order = $data['work_order'];
+                        $record->sub_work_order = null;
                     }
                     if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value) {
                         if ($data['sub_work_order'] == TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value) {
-                            $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING;
-                            $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                            $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
+                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = $data['sub_work_order'];
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
                         if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value) {
-                            $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING;
-                            $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                            $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = $data['sub_work_order'];
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
                         if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
-                            $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING;
-                            $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                            $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = $data['sub_work_order'];
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
                     }
                     if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
-                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                        $record->work_order = $data['work_order'];
+                        $record->sub_work_order = null;
                         Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                     }
                     if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
-                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING;
-                        $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT;
+                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                        $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                        $record->work_order = $data['work_order'];
+                        $record->sub_work_order = null;
                     }
                     if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value) {
-                        $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT;
+                        $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
+                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                        $record->work_order = $data['work_order'];
+                        $record->sub_work_order = null;
                     }
                     // $record->ticketHistory()->associate([
                     //     'title' => $data['title'],
@@ -310,13 +362,18 @@ class EditTicket extends EditRecord
                         'status',
                         'handler',
                     ]);
+                    Notification::make()
+                        ->title('Work order changed successfully')
+                        ->success()
+                        ->send();
                 }),
             Actions\Action::make('archive')
                 ->requiresConfirmation()
                 ->visible(function (Ticket $record) {
-                    return is_null($record->deleted_at);
+                    return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value;
                 })
                 ->action(function (Ticket $record): void {
+                    $record->end_at = now();
                     $record->deleted_at = now();
                     $record->save();
                     $this->refreshFormData([

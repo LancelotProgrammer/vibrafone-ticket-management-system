@@ -2,14 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Spatie\MediaLibrary\HasMedia;
-use Spatie\MediaLibrary\InteractsWithMedia;
 
-class Ticket extends Model implements HasMedia
+class Ticket extends Model
 {
-    use HasFactory, InteractsWithMedia;
+    use HasFactory;
 
     protected $fillable = [
         'ticket_identifier',
@@ -26,10 +25,15 @@ class Ticket extends Model implements HasMedia
         'sw_version',
         'work_order',
         'sub_work_order',
+        'attachments',
         'status',
         'handler',
         'start_at',
         'end_at',
+    ];
+
+    protected $casts = [
+        'attachments' => 'array',
     ];
 
     public function type()
