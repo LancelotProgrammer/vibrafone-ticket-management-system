@@ -115,8 +115,8 @@ class UserResource extends Resource
                 //
             ])
             ->actions([
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
-
                 Tables\Actions\Action::make('block')
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()
@@ -149,7 +149,6 @@ class UserResource extends Resource
                                 ->send();
                         }
                     }),
-
                 Tables\Actions\Action::make('unblock')
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()

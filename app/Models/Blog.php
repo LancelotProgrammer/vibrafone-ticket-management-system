@@ -12,6 +12,7 @@ class Blog extends Model
     protected $fillable = [
         'title',
         'content',
+        'image',
         'published_at',
     ];
 }

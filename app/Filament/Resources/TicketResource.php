@@ -165,7 +165,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->label('Category')
                                     ->options(Category::all()->pluck('title', 'id')),
                                 Forms\Components\FileUpload::make('attachments')
-                                    ->disabled(function ($record, Page $livewire) {
+                                    ->disabled(function (Page $livewire) {
                                         if ($livewire instanceof EditTicket) {
                                             return true;
                                         }
@@ -200,6 +200,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                             TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
                                             TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
                                             TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
+                                            TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
                                             TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
                                         ],
                                     ]),
@@ -245,32 +246,23 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->schema([
                                 Forms\Components\Select::make('customer_user_id')
                                     ->disabled(true)
-                                    ->label('Customer')
-                                    ->options(User::all()->pluck('email', 'id')),
-                                Forms\Components\Select::make('technical_support_user_id')
-                                    ->disabled(function ($record) {
-                                        return !is_null($record->technical_support_user_id);
-                                    })
                                     ->dehydrated(true)
-                                    ->live()
-                                    ->afterStateUpdated(function ($set) {
-                                        $set('start_at', Carbon::now()->toDateTimeString());
-                                    })
-                                    ->label('Technical Support')
                                     ->options(function ($record) {
                                         return User::all()
-                                            ->where('department_id', $record->department_id)
-                                            ->where('level_id', '=', 2)
+                                            ->pluck('email', 'id');
+                                    }),
+                                Forms\Components\Select::make('technical_support_user_id')
+                                    ->disabled(true)
+                                    ->dehydrated(true)
+                                    ->options(function ($record) {
+                                        return User::all()
                                             ->pluck('email', 'id');
                                     }),
                                 Forms\Components\Select::make('high_technical_support_user_id')
                                     ->disabled(true)
                                     ->dehydrated(true)
-                                    ->label('High Technical Support')
                                     ->options(function ($record) {
                                         return User::all()
-                                            ->where('department_id', $record->department_id)
-                                            ->where('level_id', '=', 3)
                                             ->pluck('email', 'id');
                                     }),
                             ])
@@ -282,9 +274,11 @@ class TicketResource extends Resource implements HasShieldPermissions
                             })
                             ->schema([
                                 Forms\Components\DateTimePicker::make('start_at')
+                                    ->live()
                                     ->disabled(true)
                                     ->dehydrated(true),
                                 Forms\Components\DateTimePicker::make('end_at')
+                                    ->live()
                                     ->disabled(true)
                                     ->dehydrated(true),
                             ])
@@ -391,7 +385,6 @@ class TicketResource extends Resource implements HasShieldPermissions
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
-                    Tables\Actions\DeleteBulkAction::make(),
                     ExportBulkAction::make(),
                 ]),
             ])

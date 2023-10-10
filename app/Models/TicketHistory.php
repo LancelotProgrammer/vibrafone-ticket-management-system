@@ -8,6 +8,8 @@ class TicketHistory extends Pivot
 {
     protected $table = 'ticket_history';
 
+    protected $primaryKey = 'title';
+
     protected $fillable = [
         'ticket_id',
         'title',

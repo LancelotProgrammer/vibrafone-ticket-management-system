@@ -14,6 +14,7 @@ class Knowledge extends Model
     protected $fillable = [
         'title',
         'content',
+        'image',
         'published_at',
     ];
 }
