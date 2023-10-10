@@ -11,6 +11,7 @@ use App\Mail\TicketEscalation;
 use App\Mail\TicketWorkOrder as TicketWorkOrderMail;
 use App\Models\Ticket;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Actions;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
@@ -41,7 +42,12 @@ class EditTicket extends EditRecord
                 ->form([
                     Select::make('user_id')
                         ->label('High Technical Support User')
-                        ->options(User::query()->pluck('name', 'id'))
+                        ->options(function ($record) {
+                            return User::all()
+                                ->where('department_id', $record->department_id)
+                                ->where('level_id', '=', 3)
+                                ->pluck('email', 'id');
+                        })
                         ->required(),
                 ])
                 ->action(function (array $data, Ticket $record): void {
@@ -377,11 +383,13 @@ class EditTicket extends EditRecord
                     return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value;
                 })
                 ->action(function (Ticket $record): void {
-                    $record->end_at = now();
-                    $record->deleted_at = now();
+                    $now = Carbon::now()->toDateTimeString();
+                    $record->end_at = $now;
+                    $record->deleted_at = $now;
                     $record->save();
                     $this->refreshFormData([
                         'deleted_at',
+                        'end_at',
                     ]);
                     Notification::make()
                         ->title('Ticket has been archived')

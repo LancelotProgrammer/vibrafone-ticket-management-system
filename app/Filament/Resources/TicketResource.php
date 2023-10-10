@@ -16,6 +16,7 @@ use App\Models\Priority;
 use App\Models\Ticket;
 use App\Models\Type;
 use App\Models\User;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Carbon\Carbon;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -32,14 +33,29 @@ use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
-class TicketResource extends Resource
+class TicketResource extends Resource implements HasShieldPermissions
 {
     protected static ?string $model = Ticket::class;
 
     protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'view_all',
+            'edit_all'
+        ];
+    }
 
     public static function form(Form $form): Form
     {
@@ -138,7 +154,7 @@ class TicketResource extends Resource
                                             $ticketIdentifier
                                         );
                                     })
-                                    ->options(Department::all()->pluck('title', 'id')),
+                                    ->options(Department::all()->where('title', '!=', 'default')->pluck('title', 'id')),
                                 Forms\Components\Select::make('category_id')
                                     ->disabled(function ($record, Page $livewire) {
                                         if ($livewire instanceof EditTicket) {
@@ -163,8 +179,6 @@ class TicketResource extends Resource
                                     ->downloadable()
                                     ->multiple()
                                     ->columnSpanFull(),
-
-
                             ])
                             ->columnSpan(4)
                             ->columns(4),
@@ -243,12 +257,22 @@ class TicketResource extends Resource
                                         $set('start_at', Carbon::now()->toDateTimeString());
                                     })
                                     ->label('Technical Support')
-                                    ->options(User::all()->pluck('email', 'id')),
+                                    ->options(function ($record) {
+                                        return User::all()
+                                            ->where('department_id', $record->department_id)
+                                            ->where('level_id', '=', 2)
+                                            ->pluck('email', 'id');
+                                    }),
                                 Forms\Components\Select::make('high_technical_support_user_id')
                                     ->disabled(true)
                                     ->dehydrated(true)
                                     ->label('High Technical Support')
-                                    ->options(User::all()->pluck('email', 'id')),
+                                    ->options(function ($record) {
+                                        return User::all()
+                                            ->where('department_id', $record->department_id)
+                                            ->where('level_id', '=', 3)
+                                            ->pluck('email', 'id');
+                                    }),
                             ])
                             ->columnSpan(4)
                             ->columns(3),
@@ -276,6 +300,18 @@ class TicketResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
+            ->poll('10s')
+            ->modifyQueryUsing(function (Builder $query) {
+                if (auth()->user()->can('view_all_ticket')) {
+                    return $query;
+                }
+                if (auth()->user()->level->code > 2) {
+                    return $query->where('department_id', auth()->user()->department_id);
+                }
+                if (true) {
+                    return $query->where('customer_user_id', auth()->user()->id);
+                }
+            })
             ->columns([
                 Split::make([
                     Stack::make([
@@ -376,17 +412,37 @@ class TicketResource extends Resource
                         TextEntry::make('sw_version'),
                         TextEntry::make('description')
                             ->columnSpanFull(),
-                        TextEntry::make('Ticket Meta Data')
+                        Section::make('Ticket Meta Data')
                             ->schema([
-                                TextEntry::make('type_id'),
-                                TextEntry::make('priority_id'),
-                                TextEntry::make('department_id'),
-                                TextEntry::make('category_id'),
+                                TextEntry::make('type.title'),
+                                TextEntry::make('priority.title'),
+                                TextEntry::make('department.title'),
+                                TextEntry::make('category.title'),
                             ])
                             ->columnSpan(4)
                             ->columns(4),
                         Section::make('Ticket Work Order')
                             ->schema([
+                                TextEntry::make('status')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        TicketStatus::IN_PROGRESS->value => 'primary',
+                                        TicketStatus::CUSTOMER_PENDING->value => 'primary',
+                                        TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'primary',
+                                        TicketStatus::CLOSED->value => 'primary',
+                                        TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value => 'primary',
+                                        TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'primary',
+                                        TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'primary',
+                                        default => 'primary'
+                                    }),
+                                TextEntry::make('handler')
+                                    ->badge()
+                                    ->color(fn (string $state): string => match ($state) {
+                                        TicketHandler::CUSTOMER->value => 'primary',
+                                        TicketHandler::TECHNICAL_SUPPORT->value => 'primary',
+                                        TicketHandler::HIGH_LEVEL_SUPPORT->value => 'primary',
+                                        default => 'primary'
+                                    }),
                                 TextEntry::make('work_order')
                                     ->badge()
                                     ->color(fn (string $state): string => match ($state) {
@@ -411,34 +467,14 @@ class TicketResource extends Resource
                                         TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'primary',
                                         default => 'primary'
                                     }),
-                                TextEntry::make('status')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        TicketStatus::IN_PROGRESS->value => 'primary',
-                                        TicketStatus::CUSTOMER_PENDING->value => 'primary',
-                                        TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'primary',
-                                        TicketStatus::CLOSED->value => 'primary',
-                                        TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value => 'primary',
-                                        TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'primary',
-                                        TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'primary',
-                                        default => 'primary'
-                                    }),
-                                TextEntry::make('handler')
-                                    ->badge()
-                                    ->color(fn (string $state): string => match ($state) {
-                                        TicketHandler::CUSTOMER->value => 'primary',
-                                        TicketHandler::TECHNICAL_SUPPORT->value => 'primary',
-                                        TicketHandler::HIGH_LEVEL_SUPPORT->value => 'primary',
-                                        default => 'primary'
-                                    }),
                             ])
                             ->columnSpan(4)
                             ->columns(4),
                         Section::make('Ticket Users')
                             ->schema([
-                                TextEntry::make('customer_user_id'),
-                                TextEntry::make('technical_support_user_id'),
-                                TextEntry::make('high_technical_support_user_id'),
+                                TextEntry::make('customer.email'),
+                                TextEntry::make('technicalSupport.email'),
+                                TextEntry::make('highTechnicalSupport.email'),
                             ])
                             ->columnSpan(4)
                             ->columns(3),
@@ -470,5 +506,14 @@ class TicketResource extends Resource
             'create' => Pages\CreateTicket::route('/create'),
             'edit' => Pages\EditTicket::route('/{record}/edit'),
         ];
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        if (auth()->user()->can('edit_all_ticket')) {
+            return true;
+        } else {
+            return $record->department_id == auth()->user()->department_id;
+        }
     }
 }

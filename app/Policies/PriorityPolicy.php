@@ -76,7 +76,7 @@ class PriorityPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_priority');
+        return $user->can('{{ DeleteAny }}');
     }
 
     /**
@@ -88,7 +88,7 @@ class PriorityPolicy
      */
     public function forceDelete(User $user, Priority $priority): bool
     {
-        return $user->can('force_delete_priority');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -99,7 +99,7 @@ class PriorityPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_priority');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
@@ -111,7 +111,7 @@ class PriorityPolicy
      */
     public function restore(User $user, Priority $priority): bool
     {
-        return $user->can('restore_priority');
+        return $user->can('{{ Restore }}');
     }
 
     /**
@@ -122,7 +122,7 @@ class PriorityPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_priority');
+        return $user->can('{{ RestoreAny }}');
     }
 
     /**
@@ -134,7 +134,7 @@ class PriorityPolicy
      */
     public function replicate(User $user, Priority $priority): bool
     {
-        return $user->can('replicate_priority');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -145,7 +145,7 @@ class PriorityPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_priority');
+        return $user->can('{{ Reorder }}');
     }
 
 }

@@ -3,10 +3,10 @@
 namespace App\Policies;
 
 use App\Models\User;
-use App\Models\FrequentlyAskedQuestionGroup;
+use App\Models\Level;
 use Illuminate\Auth\Access\HandlesAuthorization;
 
-class FrequentlyAskedQuestionGroupPolicy
+class LevelPolicy
 {
     use HandlesAuthorization;
 
@@ -18,19 +18,19 @@ class FrequentlyAskedQuestionGroupPolicy
      */
     public function viewAny(User $user): bool
     {
-        return $user->can('view_any_frequently::asked::question::group');
+        return $user->can('view_any_level');
     }
 
     /**
      * Determine whether the user can view the model.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\FrequentlyAskedQuestionGroup  $frequentlyAskedQuestionGroup
+     * @param  \App\Models\Level  $level
      * @return bool
      */
-    public function view(User $user, FrequentlyAskedQuestionGroup $frequentlyAskedQuestionGroup): bool
+    public function view(User $user, Level $level): bool
     {
-        return $user->can('view_frequently::asked::question::group');
+        return $user->can('view_level');
     }
 
     /**
@@ -41,31 +41,31 @@ class FrequentlyAskedQuestionGroupPolicy
      */
     public function create(User $user): bool
     {
-        return $user->can('create_frequently::asked::question::group');
+        return $user->can('create_level');
     }
 
     /**
      * Determine whether the user can update the model.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\FrequentlyAskedQuestionGroup  $frequentlyAskedQuestionGroup
+     * @param  \App\Models\Level  $level
      * @return bool
      */
-    public function update(User $user, FrequentlyAskedQuestionGroup $frequentlyAskedQuestionGroup): bool
+    public function update(User $user, Level $level): bool
     {
-        return $user->can('update_frequently::asked::question::group');
+        return $user->can('update_level');
     }
 
     /**
      * Determine whether the user can delete the model.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\FrequentlyAskedQuestionGroup  $frequentlyAskedQuestionGroup
+     * @param  \App\Models\Level  $level
      * @return bool
      */
-    public function delete(User $user, FrequentlyAskedQuestionGroup $frequentlyAskedQuestionGroup): bool
+    public function delete(User $user, Level $level): bool
     {
-        return $user->can('delete_frequently::asked::question::group');
+        return $user->can('delete_level');
     }
 
     /**
@@ -76,19 +76,19 @@ class FrequentlyAskedQuestionGroupPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_frequently::asked::question::group');
+        return $user->can('{{ DeleteAny }}');
     }
 
     /**
      * Determine whether the user can permanently delete.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\FrequentlyAskedQuestionGroup  $frequentlyAskedQuestionGroup
+     * @param  \App\Models\Level  $level
      * @return bool
      */
-    public function forceDelete(User $user, FrequentlyAskedQuestionGroup $frequentlyAskedQuestionGroup): bool
+    public function forceDelete(User $user, Level $level): bool
     {
-        return $user->can('force_delete_frequently::asked::question::group');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -99,19 +99,19 @@ class FrequentlyAskedQuestionGroupPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_frequently::asked::question::group');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
      * Determine whether the user can restore.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\FrequentlyAskedQuestionGroup  $frequentlyAskedQuestionGroup
+     * @param  \App\Models\Level  $level
      * @return bool
      */
-    public function restore(User $user, FrequentlyAskedQuestionGroup $frequentlyAskedQuestionGroup): bool
+    public function restore(User $user, Level $level): bool
     {
-        return $user->can('restore_frequently::asked::question::group');
+        return $user->can('{{ Restore }}');
     }
 
     /**
@@ -122,19 +122,19 @@ class FrequentlyAskedQuestionGroupPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_frequently::asked::question::group');
+        return $user->can('{{ RestoreAny }}');
     }
 
     /**
      * Determine whether the user can replicate.
      *
      * @param  \App\Models\User  $user
-     * @param  \App\Models\FrequentlyAskedQuestionGroup  $frequentlyAskedQuestionGroup
+     * @param  \App\Models\Level  $level
      * @return bool
      */
-    public function replicate(User $user, FrequentlyAskedQuestionGroup $frequentlyAskedQuestionGroup): bool
+    public function replicate(User $user, Level $level): bool
     {
-        return $user->can('replicate_frequently::asked::question::group');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -145,7 +145,7 @@ class FrequentlyAskedQuestionGroupPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_frequently::asked::question::group');
+        return $user->can('{{ Reorder }}');
     }
 
 }

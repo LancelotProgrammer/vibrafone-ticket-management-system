@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
                 DB::table('contacts')->truncate();
                 DB::table('countries')->truncate();
                 DB::table('departments')->truncate();
+                DB::table('levels')->truncate();
                 // DB::table('frequently_asked_question_groups')->truncate();
                 // DB::table('frequently_asked_questions')->truncate();
                 // DB::table('knowledges')->truncate();
@@ -47,8 +48,12 @@ class DatabaseSeeder extends Seeder
         }
 
         $this->call(CountrySeeder::class);
+        $this->call(PrioritySeeder::class);
+        $this->call(TypeSeeder::class);
+        $this->call(CategorySeeder::class);
         $this->call(DepartmentSeeder::class);
-        $this->call(AdminSeeder::class);
+        $this->call(LevelSeeder::class);
+        $this->call(UserSeeder::class);
     }
 }
 
@@ -57,6 +62,7 @@ class DatabaseSeeder extends Seeder
 // php artisan make:model Contact
 // php artisan make:model Country
 // php artisan make:model Department
+// php artisan make:model Level
 // php artisan make:model FrequentlyAskedQuestionGroup
 // php artisan make:model FrequentlyAskedQuestion
 // php artisan make:model Knowledge

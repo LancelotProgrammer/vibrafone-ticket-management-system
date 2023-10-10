@@ -76,7 +76,7 @@ class CountryPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_country');
+        return $user->can('{{ DeleteAny }}');
     }
 
     /**
@@ -88,7 +88,7 @@ class CountryPolicy
      */
     public function forceDelete(User $user, Country $country): bool
     {
-        return $user->can('force_delete_country');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -99,7 +99,7 @@ class CountryPolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_country');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
@@ -111,7 +111,7 @@ class CountryPolicy
      */
     public function restore(User $user, Country $country): bool
     {
-        return $user->can('restore_country');
+        return $user->can('{{ Restore }}');
     }
 
     /**
@@ -122,7 +122,7 @@ class CountryPolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_country');
+        return $user->can('{{ RestoreAny }}');
     }
 
     /**
@@ -134,7 +134,7 @@ class CountryPolicy
      */
     public function replicate(User $user, Country $country): bool
     {
-        return $user->can('replicate_country');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -145,7 +145,7 @@ class CountryPolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_country');
+        return $user->can('{{ Reorder }}');
     }
 
 }

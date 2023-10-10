@@ -4,6 +4,7 @@ namespace App\Filament\Pages\Auth;
 
 use App\Models\Department;
 use Filament\Forms\Components\Component;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Form;
 use Filament\Pages\Auth\Register;
@@ -19,6 +20,7 @@ class RegisterPage extends Register
                 $this->getPasswordFormComponent(),
                 $this->getPasswordConfirmationFormComponent(),
                 $this->getDepartmentFormComponent(),
+                $this->getLevelFormComponent(),
             ])
             ->statePath('data');
     }
@@ -26,8 +28,14 @@ class RegisterPage extends Register
     protected function getDepartmentFormComponent(): Component
     {
         return Select::make('department_id')
-            ->options(Department::all()->pluck('title', 'id'))
+            ->options(Department::all()->where('title', '!=', 'default')->pluck('title', 'id'))
             ->label('Department')
             ->required();
+    }
+
+    protected function getLevelFormComponent(): Component
+    {
+        return Hidden::make('level_id')
+            ->default(1);
     }
 }

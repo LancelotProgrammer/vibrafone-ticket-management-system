@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\HomePageController;
+use App\Mail\TicketWorkOrder;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Route;
 
 /*
@@ -25,12 +27,14 @@ Route::get('/contact', function () {
     return redirect('/admin/login');
 })->name('login');
 
-Route::get('/mailable', function () {
-    return new App\Mail\TicketWorkOrder([
-        'email_title' => 'test',
-        'email_body' => 'hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel ',
-        'from' => 'test',
-        'cc' => 'test',
-        'to' => 'test',
-    ]);
-});
+if (App::environment('local')) {
+    Route::get('/mailable', function () {
+        return new TicketWorkOrder([
+            'email_title' => 'test',
+            'email_body' => 'hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel hello and welcome to our channel ',
+            'from' => 'test',
+            'cc' => 'test',
+            'to' => 'test',
+        ]);
+    });
+}

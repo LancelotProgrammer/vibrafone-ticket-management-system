@@ -76,7 +76,7 @@ class TypePolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_type');
+        return $user->can('{{ DeleteAny }}');
     }
 
     /**
@@ -88,7 +88,7 @@ class TypePolicy
      */
     public function forceDelete(User $user, Type $type): bool
     {
-        return $user->can('force_delete_type');
+        return $user->can('{{ ForceDelete }}');
     }
 
     /**
@@ -99,7 +99,7 @@ class TypePolicy
      */
     public function forceDeleteAny(User $user): bool
     {
-        return $user->can('force_delete_any_type');
+        return $user->can('{{ ForceDeleteAny }}');
     }
 
     /**
@@ -111,7 +111,7 @@ class TypePolicy
      */
     public function restore(User $user, Type $type): bool
     {
-        return $user->can('restore_type');
+        return $user->can('{{ Restore }}');
     }
 
     /**
@@ -122,7 +122,7 @@ class TypePolicy
      */
     public function restoreAny(User $user): bool
     {
-        return $user->can('restore_any_type');
+        return $user->can('{{ RestoreAny }}');
     }
 
     /**
@@ -134,7 +134,7 @@ class TypePolicy
      */
     public function replicate(User $user, Type $type): bool
     {
-        return $user->can('replicate_type');
+        return $user->can('{{ Replicate }}');
     }
 
     /**
@@ -145,7 +145,7 @@ class TypePolicy
      */
     public function reorder(User $user): bool
     {
-        return $user->can('reorder_type');
+        return $user->can('{{ Reorder }}');
     }
 
 }

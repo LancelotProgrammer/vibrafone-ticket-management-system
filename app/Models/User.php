@@ -19,9 +19,9 @@ class User extends Authenticatable  implements FilamentUser
         'email',
         'password',
         'department_id',
+        'level_id',
         'country_id',
         'blocked_at',
-        'approved_at',
     ];
 
     protected $hidden = [
@@ -36,7 +36,7 @@ class User extends Authenticatable  implements FilamentUser
 
     public function canAccessPanel(Panel $panel): bool
     {
-        return is_null($this->blocked_at) && !is_null($this->approved_at);
+        return is_null($this->blocked_at);
     }
 
     public function country()
@@ -47,6 +47,11 @@ class User extends Authenticatable  implements FilamentUser
     public function department()
     {
         return $this->belongsTo('App\Models\Department');
+    }
+
+    public function level()
+    {
+        return $this->belongsTo('App\Models\Level');
     }
 
     public function customerTickets()
