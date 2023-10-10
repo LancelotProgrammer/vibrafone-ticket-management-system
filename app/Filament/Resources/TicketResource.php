@@ -281,22 +281,23 @@ class TicketResource extends Resource
                     Stack::make([
                         Tables\Columns\TextColumn::make('ticket_identifier')
                             ->icon('heroicon-m-identification'),
+                        Tables\Columns\TextColumn::make('title')
+                            ->limit(25)
+                            ->icon('heroicon-m-bars-3-bottom-left'),
                     ]),
                     Split::make([
-                        Tables\Columns\TextColumn::make('department.title')
-                            ->icon('heroicon-m-building-office'),
-                        Tables\Columns\TextColumn::make('priority.title')
-                            ->icon('heroicon-m-information-circle'),
-                        Tables\Columns\TextColumn::make('type.title')
-                            ->icon('heroicon-m-hashtag'),
-                        Tables\Columns\TextColumn::make('category.title')
-                            ->icon('heroicon-m-cog-8-tooth'),
-                    ]),
-                    Stack::make([
-                        Tables\Columns\TextColumn::make('status')
-                            ->icon('heroicon-m-wrench'),
-                        Tables\Columns\TextColumn::make('handler')
-                            ->icon('heroicon-m-tag'),
+                        Stack::make([
+                            Tables\Columns\TextColumn::make('department.title')
+                                ->icon('heroicon-m-building-office'),
+                            Tables\Columns\TextColumn::make('priority.title')
+                                ->icon('heroicon-m-exclamation-circle'),
+                        ]),
+                        Stack::make([
+                            Tables\Columns\TextColumn::make('type.title')
+                                ->icon('heroicon-m-hashtag'),
+                            Tables\Columns\TextColumn::make('category.title')
+                                ->icon('heroicon-m-cog-8-tooth'),
+                        ]),
                     ]),
                     Stack::make([
                         Tables\Columns\TextColumn::make('customer.email')
@@ -305,6 +306,12 @@ class TicketResource extends Resource
                             ->icon('heroicon-m-user-group'),
                         Tables\Columns\TextColumn::make('highTechnicalSupport.email')
                             ->icon('heroicon-m-user-plus'),
+                    ]),
+                    Stack::make([
+                        Tables\Columns\TextColumn::make('status')
+                            ->icon('heroicon-m-wrench'),
+                        Tables\Columns\TextColumn::make('handler')
+                            ->icon('heroicon-m-tag'),
                     ]),
                 ]),
             ])

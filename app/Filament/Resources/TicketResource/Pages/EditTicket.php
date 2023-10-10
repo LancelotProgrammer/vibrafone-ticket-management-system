@@ -51,6 +51,10 @@ class EditTicket extends EditRecord
                     $this->refreshFormData([
                         'high_technical_support_user_id',
                     ]);
+                    Notification::make()
+                        ->title('Ticket has been esclated')
+                        ->success()
+                        ->send();
                 }),
             Actions\Action::make('change_work_order_type')
                 ->visible(function (Ticket $record) {
@@ -379,6 +383,10 @@ class EditTicket extends EditRecord
                     $this->refreshFormData([
                         'deleted_at',
                     ]);
+                    Notification::make()
+                        ->title('Ticket has been archived')
+                        ->success()
+                        ->send();
                 })
         ];
     }

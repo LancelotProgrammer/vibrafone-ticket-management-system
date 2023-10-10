@@ -20,8 +20,10 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('/', [HomePageController::class, 'getHomePage']);
 Route::get('/contact', [HomePageController::class, 'getContactPage']);
-
 Route::post('/contact', [HomePageController::class, 'createContact']);
+Route::get('/contact', function () {
+    return redirect('/admin/login');
+})->name('login');
 
 Route::get('/mailable', function () {
     return new App\Mail\TicketWorkOrder([
