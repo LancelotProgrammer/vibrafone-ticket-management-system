@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TicketResource\Pages;
 
+use App\Enums\EmailType;
 use App\Enums\TicketHandler;
 use App\Enums\TicketStatus;
 use App\Filament\Resources\TicketResource;
@@ -29,11 +30,7 @@ class CreateTicket extends CreateRecord
 
     protected function afterCreate(): void
     {
-        Mail::to(User::find($this->record->customer_user_id))->send(new TicketCreated());//send to admin
-        Mail::to(User::find($this->record->customer_user_id))->send(new TicketCreated());//send to high level support
-        Mail::to(User::find($this->record->customer_user_id))->send(new TicketCreated());//send to customer
-        $ticket = $this->record;
-        $ticket->customer()->attach(auth()->user()->id);
+        $this->record->customer()->attach(auth()->user()->id);
         $ticketHistory = new TicketHistory([
             'title' => 'ticket has been created',
             'body' => 'ticket has been created',
@@ -44,7 +41,17 @@ class CreateTicket extends CreateRecord
             'handler' => TicketHandler::TECHNICAL_SUPPORT->value,
             'created_at' => now(),
         ]);
-        $ticket->ticketHistory()->save($ticketHistory);
-        $ticket->save();
+        $this->record->ticketHistory()->save($ticketHistory);
+        $this->record->save();
+        $title = 'Initial Response on Case:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
+        Mail::to($this->record->customer)->send(new TicketCreated(EmailType::CUSTOMER, $title));
+        foreach (User::whereHas('roles', function ($query) {
+            $query->where('name', 'super_admin')->orWhere('name', 'manager');
+        })->get() as $recipient) {
+            Mail::to($recipient)->send(new TicketCreated(EmailType::ADMIN, $title));
+        }
+        foreach (User::where('department_id', $this->record->department_id)->where('level_id', 2)->get() as $recipient) {
+            Mail::to($recipient)->send(new TicketCreated(EmailType::TECHNICAL_SUPPORT, $title));
+        }
     }
 }

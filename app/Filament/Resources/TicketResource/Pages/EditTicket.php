@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TicketResource\Pages;
 
+use App\Enums\EmailType;
 use App\Enums\TicketHandler;
 use App\Enums\TicketStatus;
 use App\Enums\TicketSubWorkOrder;
@@ -76,9 +77,18 @@ class EditTicket extends EditRecord
                     ]);
                     $record->ticketHistory()->save($ticketHistory);
                     $record->save();
-                    Mail::to(user::find($data['user_id']))->send(new TicketEscalation());//send to admin
-                    Mail::to(user::find($data['user_id']))->send(new TicketEscalation());//send to high level support
-                    Mail::to(user::find($data['user_id']))->send(new TicketEscalation());//send to customer
+
+                    $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
+                    Mail::to($this->record->customer)->send(new TicketEscalation(EmailType::CUSTOMER, $title));
+                    foreach (User::whereHas('roles', function ($query) {
+                        $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                    })->get() as $recipient) {
+                        Mail::to($recipient)->send(new TicketEscalation(EmailType::ADMIN, $title));
+                    }
+                    foreach (User::where('department_id', $this->record->department_id)->where('level_id', 3)->get() as $recipient) {
+                        Mail::to($recipient)->send(new TicketEscalation(EmailType::HIGH_TECHNICAL_SUPPORT, $title));
+                    }
+
                     $this->refreshFormData([
                         'high_technical_support_user_id',
                     ]);

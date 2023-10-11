@@ -2,6 +2,7 @@
 
 namespace App\Mail;
 
+use App\Enums\EmailType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
@@ -16,8 +17,10 @@ class TicketCreated extends Mailable
     /**
      * Create a new message instance.
      */
-    public function __construct()
-    {
+    public function __construct(
+        private readonly EmailType $type,
+        private readonly string $title,
+    ) {
         //
     }
 
@@ -26,10 +29,24 @@ class TicketCreated extends Mailable
      */
     public function envelope(): Envelope
     {
-        return new Envelope(
-            subject: 'Ticket Created',
-            from: '',
-        );
+        if ($this->type == EmailType::ADMIN) {
+            return new Envelope(
+                subject: $this->title,
+                from: '',
+            );
+        }
+        if ($this->type == EmailType::CUSTOMER) {
+            return new Envelope(
+                subject: $this->title,
+                from: '',
+            );
+        }
+        if ($this->type == EmailType::TECHNICAL_SUPPORT) {
+            return new Envelope(
+                subject: $this->title,
+                from: '',
+            );
+        }
     }
 
     /**
@@ -37,12 +54,30 @@ class TicketCreated extends Mailable
      */
     public function content(): Content
     {
-        return new Content(
-            markdown: 'emails.ticket.created',
-            with: [
-                'body' => '',
-            ],
-        );
+        if ($this->type == EmailType::ADMIN) {
+            return new Content(
+                markdown: 'emails.ticket.created',
+                with: [
+                    'body' => 'ticket created ADMIN',
+                ],
+            );
+        }
+        if ($this->type == EmailType::CUSTOMER) {
+            return new Content(
+                markdown: 'emails.ticket.created',
+                with: [
+                    'body' => 'ticket created CUSTOMER',
+                ],
+            );
+        }
+        if ($this->type == EmailType::TECHNICAL_SUPPORT) {
+            return new Content(
+                markdown: 'emails.ticket.created',
+                with: [
+                    'body' => 'ticket created TECHNICAL_SUPPORT',
+                ],
+            );
+        }
     }
 
     /**
