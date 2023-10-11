@@ -23,6 +23,7 @@ use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
 class EditTicket extends EditRecord
@@ -61,37 +62,37 @@ class EditTicket extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    $record->highTechnicalSupport()->attach($data['user_id']);
-                    $record->level_id = Level::where('code', 2)->first()->id;
-                    $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                    $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                    $ticketHistory = new TicketHistory([
-                        'ticket_id' => $record->id,
-                        'title' => 'Ticket has been esclated to: '  . User::where('id', $data['user_id'])->first()->email,
-                        'owner' => auth()->user()->email,
-                        'work_order' => $record->work_order,
-                        'sub_work_order' => $record->sub_work_order,
-                        'status' => $record->status,
-                        'handler' => $record->handler,
-                        'created_at' => now(),
-                    ]);
-                    $record->ticketHistory()->save($ticketHistory);
-                    $record->save();
-
-                    $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
-                    Mail::to($this->record->customer)->send(new TicketEscalation(EmailType::CUSTOMER, $title));
-                    foreach (User::whereHas('roles', function ($query) {
-                        $query->where('name', 'super_admin')->orWhere('name', 'manager');
-                    })->get() as $recipient) {
-                        Mail::to($recipient)->send(new TicketEscalation(EmailType::ADMIN, $title));
-                    }
-                    foreach (User::where('department_id', $this->record->department_id)->where('level_id', 3)->get() as $recipient) {
-                        Mail::to($recipient)->send(new TicketEscalation(EmailType::HIGH_TECHNICAL_SUPPORT, $title));
-                    }
-
-                    $this->refreshFormData([
-                        'high_technical_support_user_id',
-                    ]);
+                    DB::transaction(function () use ($data, $record) {
+                        $record->highTechnicalSupport()->attach($data['user_id']);
+                        $record->level_id = Level::where('code', 2)->first()->id;
+                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                        $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => 'Ticket has been esclated to: '  . User::where('id', $data['user_id'])->first()->email,
+                            'owner' => auth()->user()->email,
+                            'work_order' => $record->work_order,
+                            'sub_work_order' => $record->sub_work_order,
+                            'status' => $record->status,
+                            'handler' => $record->handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
+                        Mail::to($this->record->customer)->send(new TicketEscalation(EmailType::CUSTOMER, $title));
+                        foreach (User::whereHas('roles', function ($query) {
+                            $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                        })->get() as $recipient) {
+                            Mail::to($recipient)->send(new TicketEscalation(EmailType::ADMIN, $title));
+                        }
+                        foreach (User::where('department_id', $this->record->department_id)->where('level_id', 3)->get() as $recipient) {
+                            Mail::to($recipient)->send(new TicketEscalation(EmailType::HIGH_TECHNICAL_SUPPORT, $title));
+                        }
+                        $this->refreshFormData([
+                            'high_technical_support_user_id',
+                        ]);
+                    });
                     Notification::make()
                         ->title('Ticket has been esclated')
                         ->success()
@@ -119,23 +120,25 @@ class EditTicket extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    $record->technicalSupport()->attach($data['user_id']);
-                    $record->start_at = Carbon::now()->toDateTimeString();
-                    $ticketHistory = new TicketHistory([
-                        'ticket_id' => $record->id,
-                        'title' => 'Ticket has been assigned to: ' . User::where('id', $data['user_id'])->first()->email,
-                        'owner' => auth()->user()->email,
-                        'work_order' => $record->work_order,
-                        'sub_work_order' => $record->sub_work_order,
-                        'status' => $record->status,
-                        'handler' => $record->handler,
-                        'created_at' => now(),
-                    ]);
-                    $record->ticketHistory()->save($ticketHistory);
-                    $record->save();
-                    $this->refreshFormData([
-                        'technical_support_user_id',
-                    ]);
+                    DB::transaction(function () use ($data, $record) {
+                        $record->technicalSupport()->attach($data['user_id']);
+                        $record->start_at = Carbon::now()->toDateTimeString();
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => 'Ticket has been assigned to: ' . User::where('id', $data['user_id'])->first()->email,
+                            'owner' => auth()->user()->email,
+                            'work_order' => $record->work_order,
+                            'sub_work_order' => $record->sub_work_order,
+                            'status' => $record->status,
+                            'handler' => $record->handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $this->refreshFormData([
+                            'technical_support_user_id',
+                        ]);
+                    });
                     Notification::make()
                         ->title('Ticket has been assigned')
                         ->success()
@@ -380,137 +383,140 @@ class EditTicket extends EditRecord
                         ->columns(2),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
-                        if ($data['sub_work_order'] == TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value) {
-                            $record->status = TicketStatus::CUSTOMER_PENDING->value;
-                            $record->handler = TicketHandler::CUSTOMER->value;
-                            $status = TicketStatus::CUSTOMER_PENDING->value;
-                            $handler = TicketHandler::CUSTOMER->value;
+                    DB::transaction(function () use ($data, $record) {
+
+                        if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
+                            if ($data['sub_work_order'] == TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value) {
+                                $record->status = TicketStatus::CUSTOMER_PENDING->value;
+                                $record->handler = TicketHandler::CUSTOMER->value;
+                                $status = TicketStatus::CUSTOMER_PENDING->value;
+                                $handler = TicketHandler::CUSTOMER->value;
+                                $record->work_order = $data['work_order'];
+                                $record->sub_work_order = $data['sub_work_order'];
+                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            }
+                            if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value) {
+                                $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                                $record->handler = TicketHandler::CUSTOMER->value;
+                                $status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                                $handler = TicketHandler::CUSTOMER->value;
+                                $record->work_order = $data['work_order'];
+                                $record->sub_work_order = $data['sub_work_order'];
+                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            }
+                            if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
+                                $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                                $record->handler = TicketHandler::CUSTOMER->value;
+                                $status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                                $handler = TicketHandler::CUSTOMER->value;
+                                $record->work_order = $data['work_order'];
+                                $record->sub_work_order = $data['sub_work_order'];
+                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            }
+                        }
+                        if ($data['work_order'] == TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value) {
+                            $record->status = TicketStatus::IN_PROGRESS->value;
+                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                            $status = TicketStatus::IN_PROGRESS->value;
+                            $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                             $record->work_order = $data['work_order'];
-                            $record->sub_work_order = $data['sub_work_order'];
+                            $record->sub_work_order = null;
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
-                        if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value) {
-                            $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                        if ($data['work_order'] == TicketWorkOrder::CUSTOMER_RESPONSE->value) {
+                            $record->status = TicketStatus::IN_PROGRESS->value;
+                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                            $status = TicketStatus::IN_PROGRESS->value;
+                            $handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = null;
+                        }
+                        if ($data['work_order'] == TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value) {
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = null;
+                        }
+                        if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value) {
+                            $record->status = TicketStatus::CLOSED->value;
                             $record->handler = TicketHandler::CUSTOMER->value;
-                            $status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
+                            $status = TicketStatus::CLOSED->value;
                             $handler = TicketHandler::CUSTOMER->value;
                             $record->work_order = $data['work_order'];
-                            $record->sub_work_order = $data['sub_work_order'];
-                            Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            $record->sub_work_order = null;
+                            $record->end_at = Carbon::now()->toDateTimeString();
                         }
-                        if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
-                            $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
-                            $record->handler = TicketHandler::CUSTOMER->value;
-                            $status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
-                            $handler = TicketHandler::CUSTOMER->value;
+                        if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value) {
+                            if ($data['sub_work_order'] == TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value) {
+                                $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
+                                $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                                $status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
+                                $handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                                $record->work_order = $data['work_order'];
+                                $record->sub_work_order = $data['sub_work_order'];
+                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            }
+                            if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value) {
+                                $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                                $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                                $status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                                $handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                                $record->work_order = $data['work_order'];
+                                $record->sub_work_order = $data['sub_work_order'];
+                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            }
+                            if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
+                                $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                                $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                                $status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                                $handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                                $record->work_order = $data['work_order'];
+                                $record->sub_work_order = $data['sub_work_order'];
+                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            }
+                        }
+                        if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
+                            $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                            $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                            $status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                            $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
                             $record->work_order = $data['work_order'];
-                            $record->sub_work_order = $data['sub_work_order'];
+                            $record->sub_work_order = null;
                             Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
                         }
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value) {
-                        $record->status = TicketStatus::IN_PROGRESS->value;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                        $status = TicketStatus::IN_PROGRESS->value;
-                        $handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                        Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::CUSTOMER_RESPONSE->value) {
-                        $record->status = TicketStatus::IN_PROGRESS->value;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                        $status = TicketStatus::IN_PROGRESS->value;
-                        $handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value) {
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value) {
-                        $record->status = TicketStatus::CLOSED->value;
-                        $record->handler = TicketHandler::CUSTOMER->value;
-                        $status = TicketStatus::CLOSED->value;
-                        $handler = TicketHandler::CUSTOMER->value;
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                        $record->end_at = Carbon::now()->toDateTimeString();
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value) {
-                        if ($data['sub_work_order'] == TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value) {
+                        if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
+                            $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                            $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                            $status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                            $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                            $record->work_order = $data['work_order'];
+                            $record->sub_work_order = null;
+                        }
+                        if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value) {
                             $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
                             $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
                             $status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
                             $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                             $record->work_order = $data['work_order'];
-                            $record->sub_work_order = $data['sub_work_order'];
-                            Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            $record->sub_work_order = null;
                         }
-                        if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value) {
-                            $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
-                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                            $status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
-                            $handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                            $record->work_order = $data['work_order'];
-                            $record->sub_work_order = $data['sub_work_order'];
-                            Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
-                        }
-                        if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
-                            $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
-                            $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                            $status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
-                            $handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                            $record->work_order = $data['work_order'];
-                            $record->sub_work_order = $data['sub_work_order'];
-                            Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
-                        }
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
-                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                        $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                        $status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                        $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                        Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
-                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                        $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                        $status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                        $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                    }
-                    if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value) {
-                        $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
-                        $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                        $status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
-                        $handler = TicketHandler::TECHNICAL_SUPPORT->value;
-                        $record->work_order = $data['work_order'];
-                        $record->sub_work_order = null;
-                    }
-                    $ticketHistory = new TicketHistory([
-                        'ticket_id' => $record->id,
-                        'title' => $data['title'],
-                        'owner' => auth()->user()->email,
-                        'work_order' => $data['work_order'],
-                        'sub_work_order' => $data['sub_work_order'],
-                        'status' => $status,
-                        'handler' => $handler,
-                        'created_at' => now(),
-                    ]);
-                    $record->ticketHistory()->save($ticketHistory);
-                    $record->save();
-                    $this->refreshFormData([
-                        'work_order',
-                        'sub_work_order',
-                        'status',
-                        'handler',
-                    ]);
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => $data['title'],
+                            'owner' => auth()->user()->email,
+                            'work_order' => $data['work_order'],
+                            'sub_work_order' => $data['sub_work_order'],
+                            'status' => $status,
+                            'handler' => $handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $this->refreshFormData([
+                            'work_order',
+                            'sub_work_order',
+                            'status',
+                            'handler',
+                        ]);
+                    });
                     Notification::make()
                         ->title('Work order changed successfully')
                         ->success()
@@ -525,22 +531,24 @@ class EditTicket extends EditRecord
                     return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value;
                 })
                 ->action(function (Ticket $record): void {
-                    $record->deleted_at = Carbon::now()->toDateTimeString();
-                    $ticketHistory = new TicketHistory([
-                        'ticket_id' => $record->id,
-                        'title' => 'ticket has been archived',
-                        'owner' => auth()->user()->email,
-                        'work_order' => $record->work_order,
-                        'sub_work_order' => $record->sub_work_order,
-                        'status' => $record->status,
-                        'handler' => $record->handler,
-                        'created_at' => now(),
-                    ]);
-                    $record->ticketHistory()->save($ticketHistory);
-                    $record->save();
-                    $this->refreshFormData([
-                        'deleted_at',
-                    ]);
+                    DB::transaction(function () use ($data, $record) {
+                        $record->deleted_at = Carbon::now()->toDateTimeString();
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => 'ticket has been archived',
+                            'owner' => auth()->user()->email,
+                            'work_order' => $record->work_order,
+                            'sub_work_order' => $record->sub_work_order,
+                            'status' => $record->status,
+                            'handler' => $record->handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $this->refreshFormData([
+                            'deleted_at',
+                        ]);
+                    });
                     Notification::make()
                         ->title('Ticket has been archived')
                         ->success()
@@ -570,22 +578,24 @@ class EditTicket extends EditRecord
                 ])
                 ->action(function (array $data, Ticket $record): void {
                     try {
-                        $record->technicalSupport()->attach($data['user_id']);
-                        $ticketHistory = new TicketHistory([
-                            'ticket_id' => $record->id,
-                            'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
-                            'owner' => auth()->user()->email,
-                            'work_order' => $record->work_order,
-                            'sub_work_order' => $record->sub_work_order,
-                            'status' => $record->status,
-                            'handler' => $record->handler,
-                            'created_at' => now(),
-                        ]);
-                        $record->ticketHistory()->save($ticketHistory);
-                        $record->save();
-                        $this->refreshFormData([
-                            'technical_support',
-                        ]);
+                        DB::transaction(function () use ($data, $record) {
+                            $record->technicalSupport()->attach($data['user_id']);
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
+                            $this->refreshFormData([
+                                'technical_support',
+                            ]);
+                        });
                         Notification::make()
                             ->title('Ticket has been archived')
                             ->success()
@@ -616,22 +626,24 @@ class EditTicket extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    $record->technicalSupport()->detach($data['user_id']);
-                    $ticketHistory = new TicketHistory([
-                        'ticket_id' => $record->id,
-                        'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed from this ticket',
-                        'owner' => auth()->user()->email,
-                        'work_order' => $record->work_order,
-                        'sub_work_order' => $record->sub_work_order,
-                        'status' => $record->status,
-                        'handler' => $record->handler,
-                        'created_at' => now(),
-                    ]);
-                    $record->ticketHistory()->save($ticketHistory);
-                    $record->save();
-                    $this->refreshFormData([
-                        'technical_support',
-                    ]);
+                    DB::transaction(function () use ($data, $record) {
+                        $record->technicalSupport()->detach($data['user_id']);
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed from this ticket',
+                            'owner' => auth()->user()->email,
+                            'work_order' => $record->work_order,
+                            'sub_work_order' => $record->sub_work_order,
+                            'status' => $record->status,
+                            'handler' => $record->handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $this->refreshFormData([
+                            'technical_support',
+                        ]);
+                    });
                     Notification::make()
                         ->title('Ticket has been archived')
                         ->success()
@@ -659,22 +671,24 @@ class EditTicket extends EditRecord
                 ])
                 ->action(function (array $data, Ticket $record): void {
                     try {
-                        $record->highTechnicalSupport()->attach($data['user_id']);
-                        $ticketHistory = new TicketHistory([
-                            'ticket_id' => $record->id,
-                            'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
-                            'owner' => auth()->user()->email,
-                            'work_order' => $record->work_order,
-                            'sub_work_order' => $record->sub_work_order,
-                            'status' => $record->status,
-                            'handler' => $record->handler,
-                            'created_at' => now(),
-                        ]);
-                        $record->ticketHistory()->save($ticketHistory);
-                        $record->save();
-                        $this->refreshFormData([
-                            'high_technical_support',
-                        ]);
+                        DB::transaction(function () use ($data, $record) {
+                            $record->highTechnicalSupport()->attach($data['user_id']);
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
+                            $this->refreshFormData([
+                                'high_technical_support',
+                            ]);
+                        });
                         Notification::make()
                             ->title('High technical support added to this ticket')
                             ->success()
@@ -705,50 +719,29 @@ class EditTicket extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    $record->highTechnicalSupport()->detach($data['user_id']);
-                    $ticketHistory = new TicketHistory([
-                        'ticket_id' => $record->id,
-                        'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
-                        'owner' => auth()->user()->email,
-                        'work_order' => $record->work_order,
-                        'sub_work_order' => $record->sub_work_order,
-                        'status' => $record->status,
-                        'handler' => $record->handler,
-                        'created_at' => now(),
-                    ]);
-                    $record->ticketHistory()->save($ticketHistory);
-                    $record->save();
-                    $this->refreshFormData([
-                        'high_technical_support',
-                    ]);
+                    DB::transaction(function () use ($data, $record) {
+                        $record->highTechnicalSupport()->detach($data['user_id']);
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
+                            'owner' => auth()->user()->email,
+                            'work_order' => $record->work_order,
+                            'sub_work_order' => $record->sub_work_order,
+                            'status' => $record->status,
+                            'handler' => $record->handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $this->refreshFormData([
+                            'high_technical_support',
+                        ]);
+                    });
                     Notification::make()
                         ->title('High technical support removed from this ticket')
                         ->success()
                         ->send();
                 }),
         ];
-    }
-
-    protected function mutateFormDataBeforeSave(array $data): array
-    {
-        return $data;
-
-        // manage user changing history
-
-        dump($data);
-        dump($this->record->customer);
-        dump($this->record->technicalSupport);
-        dd($this->record->highTechnicalSupport);
-
-        $ticketHistory = new TicketHistory([
-            'ticket_id' => $data['id'],
-            'title' => 'ticket has been archived',
-            'owner' => auth()->user()->email,
-            'work_order' => $data['work_order'],
-            'sub_work_order' => $data['sub_work_order'],
-            'status' => $data['status'],
-            'handler' => $data['handler'],
-            'created_at' => now(),
-        ]);
     }
 }

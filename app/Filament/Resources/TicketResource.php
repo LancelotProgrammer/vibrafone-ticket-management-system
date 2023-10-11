@@ -15,7 +15,6 @@ use App\Models\Priority;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\Type;
-use App\Models\User;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Exception;
 use Filament\Forms;
@@ -35,6 +34,7 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Facades\DB;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class TicketResource extends Resource implements HasShieldPermissions
@@ -471,30 +471,32 @@ class TicketResource extends Resource implements HasShieldPermissions
                     })
                     ->action(function ($record) {
                         try {
-                            if (auth()->user()->hasRole(['manager', 'super_admin'])) {
-                                $record->technicalSupport()->attach(auth()->user()->id);
-                            }
-                            if (auth()->user()->level_id == 1) {
-                                $record->customer()->attach(auth()->user()->id);
-                            }
-                            if (auth()->user()->level_id == 2) {
-                                $record->technicalSupport()->attach(auth()->user()->id);
-                            }
-                            if (auth()->user()->level_id == 3) {
-                                $record->HighTechnicalSupport()->attach(auth()->user()->id);
-                            }
-                            $ticketHistory = new TicketHistory([
-                                'ticket_id' => $record->id,
-                                'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
-                                'owner' => auth()->user()->email,
-                                'work_order' => $record->work_order,
-                                'sub_work_order' => $record->sub_work_order,
-                                'status' => $record->status,
-                                'handler' => $record->handler,
-                                'created_at' => now(),
-                            ]);
-                            $record->ticketHistory()->save($ticketHistory);
-                            $record->save();
+                            DB::transaction(function () use ($record) {
+                                if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                                    $record->technicalSupport()->attach(auth()->user()->id);
+                                }
+                                if (auth()->user()->level_id == 1) {
+                                    $record->customer()->attach(auth()->user()->id);
+                                }
+                                if (auth()->user()->level_id == 2) {
+                                    $record->technicalSupport()->attach(auth()->user()->id);
+                                }
+                                if (auth()->user()->level_id == 3) {
+                                    $record->HighTechnicalSupport()->attach(auth()->user()->id);
+                                }
+                                $ticketHistory = new TicketHistory([
+                                    'ticket_id' => $record->id,
+                                    'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
+                                    'owner' => auth()->user()->email,
+                                    'work_order' => $record->work_order,
+                                    'sub_work_order' => $record->sub_work_order,
+                                    'status' => $record->status,
+                                    'handler' => $record->handler,
+                                    'created_at' => now(),
+                                ]);
+                                $record->ticketHistory()->save($ticketHistory);
+                                $record->save();
+                            });
                             Notification::make()
                                 ->title('ticket assgined to you')
                                 ->success()
@@ -532,30 +534,32 @@ class TicketResource extends Resource implements HasShieldPermissions
                     })
                     ->action(function ($record) {
                         try {
-                            if (auth()->user()->hasRole(['manager', 'super_admin'])) {
-                                $record->technicalSupport()->detach(auth()->user()->id);
-                            }
-                            if (auth()->user()->level_id == 1) {
-                                $record->customer()->detach(auth()->user()->id);
-                            }
-                            if (auth()->user()->level_id == 2) {
-                                $record->technicalSupport()->detach(auth()->user()->id);
-                            }
-                            if (auth()->user()->level_id == 3) {
-                                $record->HighTechnicalSupport()->detach(auth()->user()->id);
-                            }
-                            $ticketHistory = new TicketHistory([
-                                'ticket_id' => $record->id,
-                                'title' => 'Ticket has been unassigned from: ' . auth()->user()->email,
-                                'owner' => auth()->user()->email,
-                                'work_order' => $record->work_order,
-                                'sub_work_order' => $record->sub_work_order,
-                                'status' => $record->status,
-                                'handler' => $record->handler,
-                                'created_at' => now(),
-                            ]);
-                            $record->ticketHistory()->save($ticketHistory);
-                            $record->save();
+                            DB::transaction(function () use ($record) {
+                                if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                                    $record->technicalSupport()->detach(auth()->user()->id);
+                                }
+                                if (auth()->user()->level_id == 1) {
+                                    $record->customer()->detach(auth()->user()->id);
+                                }
+                                if (auth()->user()->level_id == 2) {
+                                    $record->technicalSupport()->detach(auth()->user()->id);
+                                }
+                                if (auth()->user()->level_id == 3) {
+                                    $record->HighTechnicalSupport()->detach(auth()->user()->id);
+                                }
+                                $ticketHistory = new TicketHistory([
+                                    'ticket_id' => $record->id,
+                                    'title' => 'Ticket has been unassigned from: ' . auth()->user()->email,
+                                    'owner' => auth()->user()->email,
+                                    'work_order' => $record->work_order,
+                                    'sub_work_order' => $record->sub_work_order,
+                                    'status' => $record->status,
+                                    'handler' => $record->handler,
+                                    'created_at' => now(),
+                                ]);
+                                $record->ticketHistory()->save($ticketHistory);
+                                $record->save();
+                            });
                             Notification::make()
                                 ->title('ticket assgined to you')
                                 ->success()
