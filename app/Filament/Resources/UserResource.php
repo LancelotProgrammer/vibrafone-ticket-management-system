@@ -10,6 +10,7 @@ use App\Models\Country;
 use App\Models\Department;
 use App\Models\Level;
 use App\Models\User;
+use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Exception;
 use Filament\Facades\Filament;
 use Filament\Forms;
@@ -23,11 +24,27 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 
-class UserResource extends Resource
+class UserResource extends Resource implements HasShieldPermissions
 {
     protected static ?string $model = User::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-user-group';
+
+    protected static ?string $navigationGroup = 'User Managment';
+
+    public static function getPermissionPrefixes(): array
+    {
+        return [
+            'view',
+            'view_any',
+            'create',
+            'update',
+            'delete',
+            'delete_any',
+            'block',
+            'unblock',
+        ];
+    }
 
     public static function form(Form $form): Form
     {
@@ -110,9 +127,7 @@ class UserResource extends Resource
                 Tables\Columns\TextColumn::make('department.title'),
                 Tables\Columns\TextColumn::make('level.title'),
                 Tables\Columns\TextColumn::make('email'),
-                Tables\Columns\TextColumn::make('email_verified_at'),
                 Tables\Columns\TextColumn::make('blocked_at'),
-                Tables\Columns\TextColumn::make('user_type'),
             ])
             ->filters([
                 //
@@ -121,6 +136,7 @@ class UserResource extends Resource
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('block')
+                    ->hidden(!(auth()->user()->can('block_user')))
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()
                     ->form([
@@ -133,8 +149,10 @@ class UserResource extends Resource
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(function (User $record) {
+                        if ($record->hasRole(['manager', 'super_admin'])) {
+                            return false;
+                        }
                         return $record->blocked_at === null;
-                        // TODO handle admins / devs
                     })
                     ->action(function (User $record) {
                         try {
@@ -153,6 +171,7 @@ class UserResource extends Resource
                         }
                     }),
                 Tables\Actions\Action::make('unblock')
+                    ->hidden(!(auth()->user()->can('unblock_user')))
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()
                     ->form([
@@ -165,8 +184,10 @@ class UserResource extends Resource
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(function (User $record) {
+                        if ($record->hasRole(['manager', 'super_admin'])) {
+                            return false;
+                        }
                         return $record->blocked_at !== null;
-                        // TODO handle admins / devs
                     })
                     ->action(function (User $record) {
                         try {

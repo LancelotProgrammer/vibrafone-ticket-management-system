@@ -23,7 +23,7 @@ use Illuminate\Support\Facades\Route;
 Route::get('/', [HomePageController::class, 'getHomePage']);
 Route::get('/contact', [HomePageController::class, 'getContactPage']);
 Route::post('/contact', [HomePageController::class, 'createContact']);
-Route::get('/contact', function () {
+Route::get('/login', function () {
     return redirect('/admin/login');
 })->name('login');
 

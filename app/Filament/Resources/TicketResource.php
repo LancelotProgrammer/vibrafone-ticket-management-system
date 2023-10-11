@@ -13,7 +13,9 @@ use App\Models\Category;
 use App\Models\Department;
 use App\Models\Priority;
 use App\Models\Ticket;
+use App\Models\TicketHistory;
 use App\Models\Type;
+use App\Models\User;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Exception;
 use Filament\Forms;
@@ -39,7 +41,9 @@ class TicketResource extends Resource implements HasShieldPermissions
 {
     protected static ?string $model = Ticket::class;
 
-    protected static ?string $navigationIcon = 'heroicon-o-rectangle-stack';
+    protected static ?string $navigationIcon = 'heroicon-o-archive-box';
+
+    protected static ?string $navigationGroup = 'Resources';
 
     public static function getPermissionPrefixes(): array
     {
@@ -113,7 +117,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->required()
                             ->maxLength(64),
                         Forms\Components\TextInput::make('sw_version')
-                        ->disabled(function ($record, Page $livewire) {
+                            ->disabled(function ($record, Page $livewire) {
                                 if (auth()->user()->can('edit_all_ticket')) {
                                     return false;
                                 }
@@ -442,7 +446,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
-                Tables\Actions\Action::make('assgin to me')
+                Tables\Actions\Action::make('assgin')
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()
                     ->form([
@@ -455,17 +459,103 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(function ($record) {
-                        // get user level
-                        // check if user in ticket or not
-                        // $record->technicalSupport()->attach();
-                        // $record->HighTechnicalSupport()->attach();
-                        // create history
-                        // can user detach?
-                        return true;
+                        if (
+                            $record->customer->contains(auth()->user()->id) ||
+                            $record->technicalSupport->contains(auth()->user()->id) ||
+                            $record->HighTechnicalSupport->contains(auth()->user()->id)
+                        ) {
+                            return false;
+                        } else {
+                            return true;
+                        }
                     })
                     ->action(function ($record) {
                         try {
-                            dd('test');
+                            if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                                $record->technicalSupport()->attach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 1) {
+                                $record->customer()->attach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 2) {
+                                $record->technicalSupport()->attach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 3) {
+                                $record->HighTechnicalSupport()->attach(auth()->user()->id);
+                            }
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
+                            Notification::make()
+                                ->title('ticket assgined to you')
+                                ->success()
+                                ->send();
+                        } catch (Exception $e) {
+                            Notification::make()
+                                ->title('Error assging ticket')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
+                Tables\Actions\Action::make('assgin')
+                    ->modalHeading('Confirm password to continue')
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\TextInput::make('password')
+                            ->label('Your password')
+                            ->required()
+                            ->password()
+                            ->currentPassword(),
+                    ])
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(function ($record) {
+                        if (
+                            $record->customer->contains(auth()->user()->id) ||
+                            $record->technicalSupport->contains(auth()->user()->id) ||
+                            $record->HighTechnicalSupport->contains(auth()->user()->id)
+                        ) {
+                            return true;
+                        } else {
+                            return false;
+                        }
+                    })
+                    ->action(function ($record) {
+                        try {
+                            if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                                $record->technicalSupport()->detach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 1) {
+                                $record->customer()->detach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 2) {
+                                $record->technicalSupport()->detach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 3) {
+                                $record->HighTechnicalSupport()->detach(auth()->user()->id);
+                            }
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Ticket has been unassigned from: ' . auth()->user()->email,
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
                             Notification::make()
                                 ->title('ticket assgined to you')
                                 ->success()
