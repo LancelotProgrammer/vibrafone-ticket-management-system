@@ -8,22 +8,21 @@ use App\Enums\TicketSubWorkOrder;
 use App\Enums\TicketWorkOrder;
 use App\Filament\Resources\TicketResource\Pages;
 use App\Filament\Resources\TicketResource\Pages\EditTicket;
-use App\Filament\Resources\TicketResource\RelationManagers;
 use App\Filament\Resources\TicketResource\RelationManagers\TicketHistoryRelationManager;
 use App\Models\Category;
 use App\Models\Department;
 use App\Models\Priority;
 use App\Models\Ticket;
 use App\Models\Type;
-use App\Models\User;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
-use Carbon\Carbon;
+use Exception;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
 use Filament\Infolists\Components\Section;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Infolists\Infolist;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Tables;
@@ -34,7 +33,6 @@ use Filament\Tables\Filters\SelectFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 
 class TicketResource extends Resource implements HasShieldPermissions
@@ -52,8 +50,18 @@ class TicketResource extends Resource implements HasShieldPermissions
             'update',
             'delete',
             'delete_any',
+
             'view_all',
-            'edit_all'
+            'edit_all',
+
+            'manage_user',
+            'manage_technical_support_attachments',
+            'manage_high_technical_support_attachments',
+
+            'esclate',
+            'assign',
+            'create_work_order_type',
+            'archive',
         ];
     }
 
@@ -84,6 +92,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->maxLength(64),
                         Forms\Components\TextInput::make('title')
                             ->disabled(function ($record, Page $livewire) {
+                                if (auth()->user()->can('edit_all_ticket')) {
+                                    return false;
+                                }
                                 if ($livewire instanceof EditTicket) {
                                     return !is_null($record->title);
                                 }
@@ -92,6 +103,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->maxLength(64),
                         Forms\Components\TextInput::make('ne_product')
                             ->disabled(function ($record, Page $livewire) {
+                                if (auth()->user()->can('edit_all_ticket')) {
+                                    return false;
+                                }
                                 if ($livewire instanceof EditTicket) {
                                     return !is_null($record->ne_product);
                                 }
@@ -99,7 +113,10 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->required()
                             ->maxLength(64),
                         Forms\Components\TextInput::make('sw_version')
-                            ->disabled(function ($record, Page $livewire) {
+                        ->disabled(function ($record, Page $livewire) {
+                                if (auth()->user()->can('edit_all_ticket')) {
+                                    return false;
+                                }
                                 if ($livewire instanceof EditTicket) {
                                     return !is_null($record->sw_version);
                                 }
@@ -108,6 +125,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->maxLength(64),
                         Forms\Components\Textarea::make('description')
                             ->disabled(function ($record, Page $livewire) {
+                                if (auth()->user()->can('edit_all_ticket')) {
+                                    return false;
+                                }
                                 if ($livewire instanceof EditTicket) {
                                     return !is_null($record->description);
                                 }
@@ -164,7 +184,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->required()
                                     ->label('Category')
                                     ->options(Category::all()->pluck('title', 'id')),
-                                Forms\Components\FileUpload::make('attachments')
+                            ])
+                            ->columnSpan(4)
+                            ->columns(4),
+                        Forms\Components\Section::make('Ticket Files')
+                            ->schema([
+                                Forms\Components\FileUpload::make('customer_attachments')
                                     ->disabled(function (Page $livewire) {
                                         if ($livewire instanceof EditTicket) {
                                             return true;
@@ -176,12 +201,44 @@ class TicketResource extends Resource implements HasShieldPermissions
                                         'image/jpeg',
                                         'image/png',
                                     ])
+                                    ->openable()
+                                    ->columnSpanFull()
+                                    ->multiple(),
+                                Forms\Components\FileUpload::make('technical_support_attachments')
+                                    ->visible(function (Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return true;
+                                        }
+                                    })
+                                    ->disabled(!(auth()->user()->can('manage_technical_support_attachments_ticket')))
+                                    ->acceptedFileTypes([
+                                        'application/pdf',
+                                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                        'image/jpeg',
+                                        'image/png',
+                                    ])
                                     ->downloadable()
-                                    ->multiple()
-                                    ->columnSpanFull(),
+                                    ->columnSpanFull()
+                                    ->multiple(),
+                                Forms\Components\FileUpload::make('high_technical_support_attachments')
+                                    ->visible(function (Page $livewire) {
+                                        if ($livewire instanceof EditTicket) {
+                                            return true;
+                                        }
+                                    })
+                                    ->disabled(!(auth()->user()->can('manage_high_technical_support_attachments_ticket')))
+                                    ->acceptedFileTypes([
+                                        'application/pdf',
+                                        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+                                        'image/jpeg',
+                                        'image/png',
+                                    ])
+                                    ->downloadable()
+                                    ->columnSpanFull()
+                                    ->multiple(),
                             ])
                             ->columnSpan(4)
-                            ->columns(4),
+                            ->columns(3),
                         Forms\Components\Section::make('Ticket Work Order')
                             ->visible(function (Page $livewire) {
                                 return $livewire instanceof EditTicket;
@@ -244,27 +301,21 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 return $livewire instanceof EditTicket;
                             })
                             ->schema([
-                                Forms\Components\Select::make('customer_user_id')
+                                Forms\Components\Select::make('customer')
+                                    ->multiple()
+                                    ->relationship('customer', 'email')
                                     ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->options(function ($record) {
-                                        return User::all()
-                                            ->pluck('email', 'id');
-                                    }),
-                                Forms\Components\Select::make('technical_support_user_id')
+                                    ->dehydrated(true),
+                                Forms\Components\Select::make('technical_support')
+                                    ->multiple()
+                                    ->relationship('technicalSupport', 'email')
                                     ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->options(function ($record) {
-                                        return User::all()
-                                            ->pluck('email', 'id');
-                                    }),
-                                Forms\Components\Select::make('high_technical_support_user_id')
+                                    ->dehydrated(true),
+                                Forms\Components\Select::make('high_technical_support')
+                                    ->multiple()
+                                    ->relationship('highTechnicalSupport', 'email')
                                     ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->options(function ($record) {
-                                        return User::all()
-                                            ->pluck('email', 'id');
-                                    }),
+                                    ->dehydrated(true),
                             ])
                             ->columnSpan(4)
                             ->columns(3),
@@ -296,15 +347,24 @@ class TicketResource extends Resource implements HasShieldPermissions
         return $table
             ->poll('10s')
             ->modifyQueryUsing(function (Builder $query) {
+                // NOTE: here we filter the tickets based on user type / department / level
                 if (auth()->user()->can('view_all_ticket')) {
                     return $query;
                 }
-                if (auth()->user()->level->code > 2) {
-                    return $query->where('department_id', auth()->user()->department_id);
+                if (auth()->user()->level_id == 2) {
+                    return $query
+                        ->where('department_id', auth()->user()->department_id);
                 }
-                if (true) {
-                    return $query->where('customer_user_id', auth()->user()->id);
+                if (auth()->user()->level_id == 3) {
+                    return $query
+                        ->where('department_id', auth()->user()->department_id)
+                        ->where('level_id', auth()->user()->level_id);
                 }
+                if (auth()->user()->level_id == 3 && auth()->user()->can('view_all_ticket')) {
+                    return $query
+                        ->where('level_id', auth()->user()->level_id);
+                }
+                return $query->where('customer_user_id', auth()->user()->id);
             })
             ->columns([
                 Split::make([
@@ -382,6 +442,42 @@ class TicketResource extends Resource implements HasShieldPermissions
             ->actions([
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\ViewAction::make(),
+                Tables\Actions\Action::make('assgin to me')
+                    ->modalHeading('Confirm password to continue')
+                    ->requiresConfirmation()
+                    ->form([
+                        Forms\Components\TextInput::make('password')
+                            ->label('Your password')
+                            ->required()
+                            ->password()
+                            ->currentPassword(),
+                    ])
+                    ->icon('heroicon-o-check-circle')
+                    ->color('success')
+                    ->visible(function ($record) {
+                        // get user level
+                        // check if user in ticket or not
+                        // $record->technicalSupport()->attach();
+                        // $record->HighTechnicalSupport()->attach();
+                        // create history
+                        // can user detach?
+                        return true;
+                    })
+                    ->action(function ($record) {
+                        try {
+                            dd('test');
+                            Notification::make()
+                                ->title('ticket assgined to you')
+                                ->success()
+                                ->send();
+                        } catch (Exception $e) {
+                            Notification::make()
+                                ->title('Error assging ticket')
+                                ->body($e->getMessage())
+                                ->danger()
+                                ->send();
+                        }
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([

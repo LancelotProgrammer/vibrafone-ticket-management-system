@@ -2,21 +2,21 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Relations\Pivot;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
 
-class TicketHistory extends Pivot
+class TicketHistory extends Model
 {
-    protected $table = 'ticket_history';
-
-    protected $primaryKey = 'title';
+    use HasFactory;
 
     protected $fillable = [
         'ticket_id',
+        'owner',
         'title',
-        'body',
         'work_order',
         'sub_work_order',
-        'created_at',
-        'updated_at',
+        'status',
+        'handler',
     ];
 }

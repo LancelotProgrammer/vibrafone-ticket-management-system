@@ -53,6 +53,9 @@ class UserResource extends Resource
                             ->disabled(fn (Page $livewire) => $livewire instanceof EditUser)
                             ->dehydrated(true)
                             ->maxLength(128),
+                        Forms\Components\TextInput::make('company')
+                            ->required()
+                            ->maxLength(128),
                         Forms\Components\TextInput::make('password')
                             ->type('password')
                             ->maxLength(255)
@@ -68,7 +71,7 @@ class UserResource extends Resource
                             })
                             ->label(fn (Page $livewire) => $livewire instanceof CreateUser ? 'Password' : 'New Password'),
                     ])
-                    ->columns(3),
+                    ->columns(4),
                 Forms\Components\Section::make()
                     ->schema([
                         Forms\Components\DatePicker::make('email_verified_at')
@@ -131,7 +134,7 @@ class UserResource extends Resource
                     ->color('danger')
                     ->visible(function (User $record) {
                         return $record->blocked_at === null;
-                        // TODO handle admins
+                        // TODO handle admins / devs
                     })
                     ->action(function (User $record) {
                         try {
@@ -163,7 +166,7 @@ class UserResource extends Resource
                     ->color('success')
                     ->visible(function (User $record) {
                         return $record->blocked_at !== null;
-                        // TODO handle admins
+                        // TODO handle admins / devs
                     })
                     ->action(function (User $record) {
                         try {

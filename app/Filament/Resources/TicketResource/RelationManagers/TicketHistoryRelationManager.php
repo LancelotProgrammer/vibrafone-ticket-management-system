@@ -35,6 +35,9 @@ class TicketHistoryRelationManager extends RelationManager
                 Tables\Columns\TextColumn::make('title')->limit(50),
                 Tables\Columns\TextColumn::make('work_order'),
                 Tables\Columns\TextColumn::make('sub_work_order'),
+                Tables\Columns\TextColumn::make('status'),
+                Tables\Columns\TextColumn::make('handler'),
+                Tables\Columns\TextColumn::make('owner'),
                 Tables\Columns\TextColumn::make('created_at'),
             ])
             ->filters([

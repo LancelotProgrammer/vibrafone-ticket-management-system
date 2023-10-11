@@ -18,6 +18,7 @@ class User extends Authenticatable  implements FilamentUser
         'name',
         'email',
         'password',
+        'company',
         'department_id',
         'level_id',
         'country_id',
@@ -56,16 +57,16 @@ class User extends Authenticatable  implements FilamentUser
 
     public function customerTickets()
     {
-        return $this->hasMany('App\Models\tickets', 'customer_user_id');
+        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'user_id', 'ticket_id');
     }
 
     public function technicalSupportTickets()
     {
-        return $this->hasMany('App\Models\tickets', 'technical_support_user_id');
+        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'user_id', 'ticket_id');
     }
 
     public function highTechnicalSupportTickets()
     {
-        return $this->hasMany('App\Models\tickets', 'high_technical_support_user_id');
+        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'user_id', 'ticket_id');
     }
 }

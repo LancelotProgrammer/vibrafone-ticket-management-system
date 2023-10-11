@@ -13,19 +13,19 @@ class Ticket extends Model
     protected $fillable = [
         'ticket_identifier',
         'type_id',
+        'level_id',
         'priority_id',
         'department_id',
         'category_id',
-        'customer_user_id',
-        'technical_support_user_id',
-        'high_technical_support_user_id',
         'title',
         'description',
         'ne_product',
         'sw_version',
         'work_order',
         'sub_work_order',
-        'attachments',
+        'customer_attachments',
+        'technical_support_attachments',
+        'high_technical_support_attachments',
         'status',
         'handler',
         'start_at',
@@ -33,12 +33,19 @@ class Ticket extends Model
     ];
 
     protected $casts = [
-        'attachments' => 'array',
+        'customer_attachments' => 'array',
+        'technical_support_attachments' => 'array',
+        'high_technical_support_attachments' => 'array',
     ];
 
     public function type()
     {
         return $this->belongsTo('App\Models\Type');
+    }
+
+    public function level()
+    {
+        return $this->belongsTo('App\Models\Level');
     }
 
     public function priority()
@@ -58,17 +65,17 @@ class Ticket extends Model
 
     public function customer()
     {
-        return $this->belongsTo('App\Models\User', 'customer_user_id');
+        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'ticket_id', 'user_id');
     }
 
     public function technicalSupport()
     {
-        return $this->belongsTo('App\Models\User', 'technical_support_user_id');
+        return $this->belongsToMany('App\Models\User', 'ticket_technical_support', 'ticket_id', 'user_id');
     }
 
     public function highTechnicalSupport()
     {
-        return $this->belongsTo('App\Models\User', 'high_technical_support_user_id');
+        return $this->belongsToMany('App\Models\User', 'ticket_high_technical_support', 'ticket_id', 'user_id');
     }
 
     public function ticketHistory()
