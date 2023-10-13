@@ -121,7 +121,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                                                     $ticketIdentifier
                                                 );
                                             })
-                                            ->options(Department::all()->where('title', '!=', 'default')->pluck('title', 'id')),
+                                            ->options(function () {
+                                                if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                                                    return Department::all()->where('title', '!=', 'default')->pluck('title', 'id');
+                                                } else {
+                                                    return Department::all()->where('title', '!=', 'default')->where('id', auth()->user()->department_id)->pluck('title', 'id');
+                                                }
+                                            }),
                                         Forms\Components\Select::make('category_id')
                                             ->required()
                                             ->label('Category')
@@ -560,20 +566,21 @@ class TicketResource extends Resource implements HasShieldPermissions
                 if (auth()->user()->can('view_all_ticket')) {
                     return $query;
                 }
-                if (auth()->user()->level_id == 2) {
+                if (auth()->user()->level_id == 3 && auth()->user()->can('view_all_ticket')) {
                     return $query
-                        ->where('department_id', auth()->user()->department_id);
+                        ->where('level_id', auth()->user()->level_id);
                 }
                 if (auth()->user()->level_id == 3) {
                     return $query
                         ->where('department_id', auth()->user()->department_id)
                         ->where('level_id', auth()->user()->level_id);
                 }
-                if (auth()->user()->level_id == 3 && auth()->user()->can('view_all_ticket')) {
+                if (auth()->user()->level_id == 2 || auth()->user()->level_id == 1) {
                     return $query
-                        ->where('level_id', auth()->user()->level_id);
+                        ->where('department_id', auth()->user()->department_id);
                 }
-                return $query->where('customer_user_id', auth()->user()->id);
+                return $query
+                    ->where('department_id', auth()->user()->department_id);
             })
             ->columns([
                 Split::make([
@@ -649,11 +656,26 @@ class TicketResource extends Resource implements HasShieldPermissions
                     })
             ])
             ->actions([
+                Tables\Actions\DeleteAction::make(),
+                Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make()
                     ->visible(function ($record) {
-                        return $record->status != TicketStatus::CLOSED->value;
+                        if ($record->status == TicketStatus::CLOSED->value) {
+                            return false;
+                        }
+                        if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                            return true;
+                        }
+                        if (
+                            $record->technicalSupport->contains(auth()->user()->id) ||
+                            $record->highTechnicalSupport->contains(auth()->user()->id)
+                        ) {
+                            return true;
+                        }
+                        if ($record->customer->contains(auth()->user()->id)) {
+                            return false;
+                        }
                     }),
-                Tables\Actions\DeleteAction::make(),
                 Tables\Actions\Action::make('archive')
                     ->hidden(!(auth()->user()->can('archive_ticket')))
                     ->requiresConfirmation()
@@ -681,7 +703,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\ViewAction::make(),
                 Tables\Actions\Action::make('assgin')
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()
@@ -695,6 +716,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(function ($record) {
+                        if ($record->status == TicketStatus::CLOSED->value) {
+                            return false;
+                        }
+                        if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                            return false;
+                        }
                         if (
                             $record->customer->contains(auth()->user()->id) ||
                             $record->technicalSupport->contains(auth()->user()->id) ||
@@ -731,69 +758,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     'created_at' => now(),
                                 ]);
                                 $record->ticketHistory()->save($ticketHistory);
-                                $record->save();
-                            });
-                            Notification::make()
-                                ->title('ticket assgined to you')
-                                ->success()
-                                ->send();
-                        } catch (Exception $e) {
-                            Notification::make()
-                                ->title('Error assging ticket')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
-                Tables\Actions\Action::make('assgin')
-                    ->modalHeading('Confirm password to continue')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Your password')
-                            ->required()
-                            ->password()
-                            ->currentPassword(),
-                    ])
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(function ($record) {
-                        if (
-                            $record->customer->contains(auth()->user()->id) ||
-                            $record->technicalSupport->contains(auth()->user()->id) ||
-                            $record->HighTechnicalSupport->contains(auth()->user()->id)
-                        ) {
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    })
-                    ->action(function ($record) {
-                        try {
-                            DB::transaction(function () use ($record) {
-                                if (auth()->user()->hasRole(['manager', 'super_admin'])) {
-                                    $record->technicalSupport()->detach(auth()->user()->id);
+                                if (is_null($record->start_at)) {
+                                    $record->start_at = now();
                                 }
-                                if (auth()->user()->level_id == 1) {
-                                    $record->customer()->detach(auth()->user()->id);
-                                }
-                                if (auth()->user()->level_id == 2) {
-                                    $record->technicalSupport()->detach(auth()->user()->id);
-                                }
-                                if (auth()->user()->level_id == 3) {
-                                    $record->HighTechnicalSupport()->detach(auth()->user()->id);
-                                }
-                                $ticketHistory = new TicketHistory([
-                                    'ticket_id' => $record->id,
-                                    'title' => 'Ticket has been unassigned from: ' . auth()->user()->email,
-                                    'owner' => auth()->user()->email,
-                                    'work_order' => $record->work_order,
-                                    'sub_work_order' => $record->sub_work_order,
-                                    'status' => $record->status,
-                                    'handler' => $record->handler,
-                                    'created_at' => now(),
-                                ]);
-                                $record->ticketHistory()->save($ticketHistory);
                                 $record->save();
                             });
                             Notification::make()
@@ -818,98 +785,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                 Tables\Actions\CreateAction::make(),
             ]);
     }
-
-    // public static function infolist(Infolist $infolist): Infolist
-    // {
-    //     return $infolist
-    //         ->schema([
-    //             Section::make('Ticket Info')
-    //                 ->schema([
-    //                     TextEntry::make('ticket_identifier'),
-    //                     TextEntry::make('title'),
-    //                     TextEntry::make('ne_product'),
-    //                     TextEntry::make('sw_version'),
-    //                     TextEntry::make('description')
-    //                         ->columnSpanFull(),
-    //                     Section::make('Ticket Meta Data')
-    //                         ->schema([
-    //                             TextEntry::make('type.title'),
-    //                             TextEntry::make('priority.title'),
-    //                             TextEntry::make('department.title'),
-    //                             TextEntry::make('category.title'),
-    //                         ])
-    //                         ->columnSpan(4)
-    //                         ->columns(4),
-    //                     Section::make('Ticket Work Order')
-    //                         ->schema([
-    //                             TextEntry::make('status')
-    //                                 ->badge()
-    //                                 ->color(fn (string $state): string => match ($state) {
-    //                                     TicketStatus::IN_PROGRESS->value => 'primary',
-    //                                     TicketStatus::CUSTOMER_PENDING->value => 'primary',
-    //                                     TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'primary',
-    //                                     TicketStatus::CLOSED->value => 'primary',
-    //                                     TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value => 'primary',
-    //                                     TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'primary',
-    //                                     TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'primary',
-    //                                     default => 'primary'
-    //                                 }),
-    //                             TextEntry::make('handler')
-    //                                 ->badge()
-    //                                 ->color(fn (string $state): string => match ($state) {
-    //                                     TicketHandler::CUSTOMER->value => 'primary',
-    //                                     TicketHandler::TECHNICAL_SUPPORT->value => 'primary',
-    //                                     TicketHandler::HIGH_LEVEL_SUPPORT->value => 'primary',
-    //                                     default => 'primary'
-    //                                 }),
-    //                             TextEntry::make('work_order')
-    //                                 ->badge()
-    //                                 ->color(fn (string $state): string => match ($state) {
-    //                                     TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'primary',
-    //                                     TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'primary',
-    //                                     TicketWorkOrder::CUSTOMER_RESPONSE->value => 'primary',
-    //                                     TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'primary',
-    //                                     TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'primary',
-    //                                     TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'primary',
-    //                                     TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'primary',
-    //                                     TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'primary',
-    //                                     default => 'primary'
-    //                                 }),
-    //                             TextEntry::make('sub_work_order')
-    //                                 ->badge()
-    //                                 ->color(fn (string $state): string => match ($state) {
-    //                                     TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'primary',
-    //                                     TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'primary',
-    //                                     TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'primary',
-    //                                     TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'primary',
-    //                                     TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'primary',
-    //                                     TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'primary',
-    //                                     default => 'primary'
-    //                                 }),
-    //                         ])
-    //                         ->columnSpan(4)
-    //                         ->columns(4),
-    //                     Section::make('Ticket Users')
-    //                         ->schema([
-    //                             TextEntry::make('customer.email'),
-    //                             TextEntry::make('technicalSupport.email'),
-    //                             TextEntry::make('highTechnicalSupport.email'),
-    //                         ])
-    //                         ->columnSpan(4)
-    //                         ->columns(3),
-    //                     Section::make('Ticket Proccess Time')
-    //                         ->schema([
-    //                             TextEntry::make('start_at'),
-    //                             TextEntry::make('end_at'),
-    //                         ])
-    //                         ->columnSpan(4)
-    //                         ->columns(2),
-    //                 ])
-    //                 ->columnSpan(3)
-    //                 ->columns(4),
-    //         ])
-    //         ->columns(3);
-    // }
 
     public static function getRelations(): array
     {

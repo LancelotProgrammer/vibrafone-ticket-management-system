@@ -122,7 +122,6 @@ class EditTicket extends EditRecord
                 ->action(function (array $data, Ticket $record): void {
                     DB::transaction(function () use ($data, $record) {
                         $record->technicalSupport()->attach($data['user_id']);
-                        $record->start_at = now();
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
                             'title' => 'Ticket has been assigned to: ' . User::where('id', $data['user_id'])->first()->email,
@@ -135,6 +134,9 @@ class EditTicket extends EditRecord
                         ]);
                         $record->ticketHistory()->save($ticketHistory);
                         $record->save();
+                        if (is_null($record->start_at)) {
+                            $record->start_at = now();
+                        }
                         $this->refreshFormData([
                             'technical_support_user_id',
                             'start_at',
