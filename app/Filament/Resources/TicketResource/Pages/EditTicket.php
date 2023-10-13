@@ -14,15 +14,16 @@ use App\Models\Level;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\User;
-use Carbon\Carbon;
 use Exception;
 use Filament\Actions;
+use Filament\Actions\ActionGroup;
 use Filament\Forms\Components\Section;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
 use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
+use Filament\Support\Enums\ActionSize;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 
@@ -33,7 +34,6 @@ class EditTicket extends EditRecord
     protected function getHeaderActions(): array
     {
         return [
-            Actions\DeleteAction::make(),
 
             //NOTE: manage esclate_ticket
             Actions\Action::make('esclate_ticket')
@@ -122,7 +122,7 @@ class EditTicket extends EditRecord
                 ->action(function (array $data, Ticket $record): void {
                     DB::transaction(function () use ($data, $record) {
                         $record->technicalSupport()->attach($data['user_id']);
-                        $record->start_at = Carbon::now()->toDateTimeString();
+                        $record->start_at = now();
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
                             'title' => 'Ticket has been assigned to: ' . User::where('id', $data['user_id'])->first()->email,
@@ -137,6 +137,7 @@ class EditTicket extends EditRecord
                         $record->save();
                         $this->refreshFormData([
                             'technical_support_user_id',
+                            'start_at',
                         ]);
                     });
                     Notification::make()
@@ -145,7 +146,7 @@ class EditTicket extends EditRecord
                         ->send();
                 }),
 
-            //NOTE: manage create_work_order_type
+            //NOTE: manage
             Actions\Action::make('create_work_order_type')
                 ->hidden(!(auth()->user()->can('create_work_order_type_ticket')))
                 ->visible(function (Ticket $record) {
@@ -160,6 +161,8 @@ class EditTicket extends EditRecord
                 ->form([
                     Section::make()
                         ->schema([
+
+                            //NOTE: create_work_order_type form
                             Select::make('work_order')
                                 ->required()
                                 ->live()
@@ -383,8 +386,10 @@ class EditTicket extends EditRecord
                         ->columns(2),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    DB::transaction(function () use ($data, $record) {
 
+                    //NOTE: create_work_order_type action
+                    DB::transaction(function () use ($data, $record) {
+                        $redirectFlag = false;
                         if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
                             if ($data['sub_work_order'] == TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value) {
                                 $record->status = TicketStatus::CUSTOMER_PENDING->value;
@@ -434,6 +439,8 @@ class EditTicket extends EditRecord
                         if ($data['work_order'] == TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value) {
                             $record->work_order = $data['work_order'];
                             $record->sub_work_order = null;
+                            $status = $record->status;
+                            $handler = $record->handler;
                         }
                         if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value) {
                             $record->status = TicketStatus::CLOSED->value;
@@ -442,7 +449,8 @@ class EditTicket extends EditRecord
                             $handler = TicketHandler::CUSTOMER->value;
                             $record->work_order = $data['work_order'];
                             $record->sub_work_order = null;
-                            $record->end_at = Carbon::now()->toDateTimeString();
+                            $record->end_at = now();
+                            $redirectFlag = true;
                         }
                         if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value) {
                             if ($data['sub_work_order'] == TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value) {
@@ -510,6 +518,9 @@ class EditTicket extends EditRecord
                         ]);
                         $record->ticketHistory()->save($ticketHistory);
                         $record->save();
+                        if ($redirectFlag) {
+                            return redirect('/admin/tickets/' . $record->id);
+                        }
                         $this->refreshFormData([
                             'work_order',
                             'sub_work_order',
@@ -523,66 +534,86 @@ class EditTicket extends EditRecord
                         ->send();
                 }),
 
-            //NOTE: manage archive_ticket
-            Actions\Action::make('archive')
-                ->hidden(!(auth()->user()->can('archive_ticket')))
-                ->requiresConfirmation()
-                ->visible(function (Ticket $record) {
-                    return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value;
-                })
-                ->action(function (Ticket $record): void {
-                    DB::transaction(function () use ($data, $record) {
-                        $record->deleted_at = Carbon::now()->toDateTimeString();
-                        $ticketHistory = new TicketHistory([
-                            'ticket_id' => $record->id,
-                            'title' => 'ticket has been archived',
-                            'owner' => auth()->user()->email,
-                            'work_order' => $record->work_order,
-                            'sub_work_order' => $record->sub_work_order,
-                            'status' => $record->status,
-                            'handler' => $record->handler,
-                            'created_at' => now(),
-                        ]);
-                        $record->ticketHistory()->save($ticketHistory);
-                        $record->save();
-                        $this->refreshFormData([
-                            'deleted_at',
-                        ]);
-                    });
-                    Notification::make()
-                        ->title('Ticket has been archived')
-                        ->success()
-                        ->send();
-                }),
-
             //NOTE: manage user_ticket
-            Actions\Action::make('add_technical_support')
-                ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                ->requiresConfirmation()
-                ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
-                        return false;
-                    }
-                    return $record->technicalSupport->count() >= 1;
-                })
-                ->form([
-                    Select::make('user_id')
-                        ->label('Technical Support User')
-                        ->options(function ($record) {
-                            return User::all()
-                                ->where('department_id', $record->department_id)
-                                ->where('level_id', '=', 2)
-                                ->pluck('email', 'id');
-                        })
-                        ->required(),
-                ])
-                ->action(function (array $data, Ticket $record): void {
-                    try {
+            ActionGroup::make([
+                Actions\Action::make('add_technical_support')
+                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->requiresConfirmation()
+                    ->visible(function (Ticket $record) {
+                        if (!is_null($record->deleted_at)) {
+                            return false;
+                        }
+                        if ($record->status == TicketStatus::CLOSED->value) {
+                            return false;
+                        }
+                        return $record->technicalSupport->count() >= 1;
+                    })
+                    ->form([
+                        Select::make('user_id')
+                            ->label('Technical Support User')
+                            ->options(function ($record) {
+                                return User::all()
+                                    ->where('department_id', $record->department_id)
+                                    ->where('level_id', '=', 2)
+                                    ->pluck('email', 'id');
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, Ticket $record): void {
+                        try {
+                            DB::transaction(function () use ($data, $record) {
+                                $record->technicalSupport()->attach($data['user_id']);
+                                $ticketHistory = new TicketHistory([
+                                    'ticket_id' => $record->id,
+                                    'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                    'owner' => auth()->user()->email,
+                                    'work_order' => $record->work_order,
+                                    'sub_work_order' => $record->sub_work_order,
+                                    'status' => $record->status,
+                                    'handler' => $record->handler,
+                                    'created_at' => now(),
+                                ]);
+                                $record->ticketHistory()->save($ticketHistory);
+                                $record->save();
+                            });
+                            Notification::make()
+                                ->title('Ticket has been archived')
+                                ->success()
+                                ->send();
+                        } catch (Exception) {
+                            Notification::make()
+                                ->title('Technical Support already add to this ticket')
+                                ->warning()
+                                ->send();
+                        }
+                    }),
+                Actions\Action::make('remove_technical_support')
+                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->requiresConfirmation()
+                    ->visible(function (Ticket $record) {
+                        if (!is_null($record->deleted_at)) {
+                            return false;
+                        }
+                        if ($record->status == TicketStatus::CLOSED->value) {
+                            return false;
+                        }
+                        return $record->technicalSupport->count() >= 2;
+                    })
+                    ->form([
+                        Select::make('user_id')
+                            ->label('Technical Support User')
+                            ->options(function ($record) {
+                                return $record->technicalSupport
+                                    ->pluck('email', 'id');
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, Ticket $record): void {
                         DB::transaction(function () use ($data, $record) {
-                            $record->technicalSupport()->attach($data['user_id']);
+                            $record->technicalSupport()->detach($data['user_id']);
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed from this ticket',
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -592,90 +623,90 @@ class EditTicket extends EditRecord
                             ]);
                             $record->ticketHistory()->save($ticketHistory);
                             $record->save();
-                            $this->refreshFormData([
-                                'technical_support',
-                            ]);
                         });
                         Notification::make()
                             ->title('Ticket has been archived')
                             ->success()
                             ->send();
-                    } catch (Exception) {
-                        Notification::make()
-                            ->title('Technical Support already add to this ticket')
-                            ->warning()
-                            ->send();
-                    }
-                }),
-            Actions\Action::make('remove_technical_support')
-                ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                ->requiresConfirmation()
-                ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
-                        return false;
-                    }
-                    return $record->technicalSupport->count() >= 2;
-                })
-                ->form([
-                    Select::make('user_id')
-                        ->label('Technical Support User')
-                        ->options(function ($record) {
-                            return $record->technicalSupport
-                                ->pluck('email', 'id');
-                        })
-                        ->required(),
-                ])
-                ->action(function (array $data, Ticket $record): void {
-                    DB::transaction(function () use ($data, $record) {
-                        $record->technicalSupport()->detach($data['user_id']);
-                        $ticketHistory = new TicketHistory([
-                            'ticket_id' => $record->id,
-                            'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed from this ticket',
-                            'owner' => auth()->user()->email,
-                            'work_order' => $record->work_order,
-                            'sub_work_order' => $record->sub_work_order,
-                            'status' => $record->status,
-                            'handler' => $record->handler,
-                            'created_at' => now(),
-                        ]);
-                        $record->ticketHistory()->save($ticketHistory);
-                        $record->save();
-                        $this->refreshFormData([
-                            'technical_support',
-                        ]);
-                    });
-                    Notification::make()
-                        ->title('Ticket has been archived')
-                        ->success()
-                        ->send();
-                }),
-            Actions\Action::make('add_high_technical_support')
-                ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                ->requiresConfirmation()
-                ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
-                        return false;
-                    }
-                    return $record->highTechnicalSupport->count() >= 1;
-                })
-                ->form([
-                    Select::make('user_id')
-                        ->label('High Technical Support User')
-                        ->options(function ($record) {
-                            return User::all()
-                                ->where('department_id', $record->department_id)
-                                ->where('level_id', '=', 3)
-                                ->pluck('email', 'id');
-                        })
-                        ->required(),
-                ])
-                ->action(function (array $data, Ticket $record): void {
-                    try {
+                    }),
+                Actions\Action::make('add_high_technical_support')
+                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->requiresConfirmation()
+                    ->visible(function (Ticket $record) {
+                        if (!is_null($record->deleted_at)) {
+                            return false;
+                        }
+                        if ($record->status == TicketStatus::CLOSED->value) {
+                            return false;
+                        }
+                        return $record->highTechnicalSupport->count() >= 1;
+                    })
+                    ->form([
+                        Select::make('user_id')
+                            ->label('High Technical Support User')
+                            ->options(function ($record) {
+                                return User::all()
+                                    ->where('department_id', $record->department_id)
+                                    ->where('level_id', '=', 3)
+                                    ->pluck('email', 'id');
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, Ticket $record): void {
+                        try {
+                            DB::transaction(function () use ($data, $record) {
+                                $record->highTechnicalSupport()->attach($data['user_id']);
+                                $ticketHistory = new TicketHistory([
+                                    'ticket_id' => $record->id,
+                                    'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                    'owner' => auth()->user()->email,
+                                    'work_order' => $record->work_order,
+                                    'sub_work_order' => $record->sub_work_order,
+                                    'status' => $record->status,
+                                    'handler' => $record->handler,
+                                    'created_at' => now(),
+                                ]);
+                                $record->ticketHistory()->save($ticketHistory);
+                                $record->save();
+                            });
+                            Notification::make()
+                                ->title('High technical support added to this ticket')
+                                ->success()
+                                ->send();
+                        } catch (Exception) {
+                            Notification::make()
+                                ->title('High technical support already add to this ticket')
+                                ->warning()
+                                ->send();
+                        }
+                    }),
+                Actions\Action::make('remove_high_technical_support')
+                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->requiresConfirmation()
+                    ->visible(function (Ticket $record) {
+                        if (!is_null($record->deleted_at)) {
+                            return false;
+                        }
+                        if ($record->status == TicketStatus::CLOSED->value) {
+                            return false;
+                        }
+                        return $record->highTechnicalSupport->count() >= 2;
+                    })
+                    ->form([
+                        Select::make('user_id')
+                            ->label('High Technical Support User')
+                            ->options(function ($record) {
+                                return $record->highTechnicalSupport
+                                    ->pluck('email', 'id');
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, Ticket $record): void {
                         DB::transaction(function () use ($data, $record) {
-                            $record->highTechnicalSupport()->attach($data['user_id']);
+                            $record->highTechnicalSupport()->detach($data['user_id']);
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -685,63 +716,18 @@ class EditTicket extends EditRecord
                             ]);
                             $record->ticketHistory()->save($ticketHistory);
                             $record->save();
-                            $this->refreshFormData([
-                                'high_technical_support',
-                            ]);
                         });
                         Notification::make()
-                            ->title('High technical support added to this ticket')
+                            ->title('High technical support removed from this ticket')
                             ->success()
                             ->send();
-                    } catch (Exception) {
-                        Notification::make()
-                            ->title('High technical support already add to this ticket')
-                            ->warning()
-                            ->send();
-                    }
-                }),
-            Actions\Action::make('remove_high_technical_support')
-                ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                ->requiresConfirmation()
-                ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
-                        return false;
-                    }
-                    return $record->highTechnicalSupport->count() >= 2;
-                })
-                ->form([
-                    Select::make('user_id')
-                        ->label('High Technical Support User')
-                        ->options(function ($record) {
-                            return $record->highTechnicalSupport
-                                ->pluck('email', 'id');
-                        })
-                        ->required(),
-                ])
-                ->action(function (array $data, Ticket $record): void {
-                    DB::transaction(function () use ($data, $record) {
-                        $record->highTechnicalSupport()->detach($data['user_id']);
-                        $ticketHistory = new TicketHistory([
-                            'ticket_id' => $record->id,
-                            'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
-                            'owner' => auth()->user()->email,
-                            'work_order' => $record->work_order,
-                            'sub_work_order' => $record->sub_work_order,
-                            'status' => $record->status,
-                            'handler' => $record->handler,
-                            'created_at' => now(),
-                        ]);
-                        $record->ticketHistory()->save($ticketHistory);
-                        $record->save();
-                        $this->refreshFormData([
-                            'high_technical_support',
-                        ]);
-                    });
-                    Notification::make()
-                        ->title('High technical support removed from this ticket')
-                        ->success()
-                        ->send();
-                }),
+                    }),
+            ])
+                ->label('Manage Users')
+                ->icon('heroicon-m-ellipsis-vertical')
+                ->size(ActionSize::Small)
+                ->color('primary')
+                ->button(),
         ];
     }
 }
