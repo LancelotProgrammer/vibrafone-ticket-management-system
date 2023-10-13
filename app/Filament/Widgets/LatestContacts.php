@@ -19,10 +19,12 @@ class LatestContacts extends BaseWidget
     {
         return $table
             ->query(
-                Contact::query()->where('read_at', null)
+                Contact::query()->where('read_at', null)->orderBy('created_at', 'DESC')
             )
             ->columns([
-                // ...
+                Tables\Columns\TextColumn::make('name'),
+                Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('subject'),
             ]);
     }
 }

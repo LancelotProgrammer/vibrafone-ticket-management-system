@@ -14,6 +14,7 @@ use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\ActionGroup;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
@@ -56,14 +57,14 @@ class ContactResource extends Resource implements HasShieldPermissions
             ->schema([
                 Forms\Components\Fieldset::make('Contact Details')
                     ->schema([
-                        Forms\Components\TextInput::make('first_name'),
-                        Forms\Components\TextInput::make('last_name'),
+                        Forms\Components\TextInput::make('name'),
                         Forms\Components\TextInput::make('email'),
+                        Forms\Components\TextInput::make('subject'),
                     ])
                     ->columns(3),
                 Forms\Components\Fieldset::make('Contact')
                     ->schema([
-                        Forms\Components\Textarea::make('feedback'),
+                        Forms\Components\Textarea::make('description'),
                     ])
                     ->columns(1),
             ]);
@@ -73,19 +74,19 @@ class ContactResource extends Resource implements HasShieldPermissions
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('first_name'),
-                Tables\Columns\TextColumn::make('last_name'),
+                Tables\Columns\TextColumn::make('name')->searchable(),
                 Tables\Columns\TextColumn::make('email')->searchable(),
+                Tables\Columns\TextColumn::make('subject'),
                 Tables\Columns\TextColumn::make('created_at'),
-                // Tables\Columns\IconColumn::make('is_important')
-                //     ->color(fn ($state) => match ($state) {
-                //         false => 'danger',
-                //         true => 'success',
-                //     })
-                //     ->icon(fn ($state) => match ($state) {
-                //         false => 'heroicon-o-check-circle',
-                //         true => 'heroicon-o-x-circle',
-                //     }),
+                Tables\Columns\IconColumn::make('is_important')
+                    ->color(fn ($state) => match ($state) {
+                        0 => 'danger',
+                        1 => 'success',
+                    })
+                    ->icon(fn ($state) => match ($state) {
+                        0 => 'heroicon-o-x-circle',
+                        1 => 'heroicon-o-check-circle',
+                    }),
             ])
             ->filters([
                 TernaryFilter::make('read_at')
@@ -127,121 +128,125 @@ class ContactResource extends Resource implements HasShieldPermissions
             ->actions([
                 Tables\Actions\ViewAction::make()
                     ->label('View Contact'),
-                Tables\Actions\Action::make('Mark as Read')
-                    ->hidden(!auth()->user()->can('mark_as_read_contact'))
-                    ->modalHeading('Confirm password to continue')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Your password')
-                            ->required()
-                            ->password()
-                            ->currentPassword(),
-                    ])
-                    ->icon('heroicon-o-check')
-                    ->color('success')
-                    ->visible(fn (Contact $record): bool => $record->read_at === null)
-                    ->action(function (Contact $record) {
-                        $record->read_at = now();
-                        $record->save();
-                        Notification::make()
-                            ->title('Contact Marked as Read')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\Action::make('Mark as important')
-                    ->hidden(!auth()->user()->can('mark_as_important_contact'))
-                    ->modalHeading('Confirm password to continue')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Your password')
-                            ->required()
-                            ->password()
-                            ->currentPassword(),
-                    ])
-                    ->icon('heroicon-o-exclamation-circle')
-                    ->color('success')
-                    ->visible(fn (Contact $record): bool => $record->is_important == false)
-                    ->action(function (Contact $record) {
-                        $record->is_important = true;
-                        $record->save();
-                        Notification::make()
-                            ->title('Contact Marked as important')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\Action::make('Mark as not important')
-                    ->hidden(!auth()->user()->can('mark_as_important_contact'))
-                    ->modalHeading('Confirm password to continue')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Your password')
-                            ->required()
-                            ->password()
-                            ->currentPassword(),
-                    ])
-                    ->icon('heroicon-o-exclamation-circle')
-                    ->color('danger')
-                    ->visible(fn (Contact $record): bool => $record->is_important == true)
-                    ->action(function (Contact $record) {
-                        $record->is_important = false;
-                        $record->save();
-                        Notification::make()
-                            ->title('Contact Marked as not important')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\Action::make('reply')
-                    ->hidden(!auth()->user()->can('reply_contact'))
-                    ->color('primary')
-                    ->form(function (Contact $record) {
-                        return [
+                ActionGroup::make([
+                    Tables\Actions\Action::make('Mark as Read')
+                        ->hidden(!auth()->user()->can('mark_as_read_contact'))
+                        ->modalHeading('Confirm password to continue')
+                        ->requiresConfirmation()
+                        ->form([
                             Forms\Components\TextInput::make('password')
                                 ->label('Your password')
                                 ->required()
                                 ->password()
                                 ->currentPassword(),
-                            Forms\Components\TextInput::make('email')
-                                ->default($record->email)
-                                ->required()
-                                ->label('email')
-                                ->placeholder('email'),
-                            Forms\Components\Textarea::make('message')
-                                ->required()
-                                ->label('Message')
-                                ->placeholder('Message'),
-                        ];
-                    })
-                    ->requiresConfirmation()
-                    ->action(function (array $data, Contact $record) {
-                        try {
+                        ])
+                        ->icon('heroicon-o-check')
+                        ->color('success')
+                        ->visible(fn (Contact $record): bool => $record->read_at === null)
+                        ->action(function (Contact $record) {
                             $record->read_at = now();
                             $record->save();
-                            Mail::to($data['email'])->send(new ReplyToContact($data['message']));
                             Notification::make()
-                                ->title('User notified')
+                                ->title('Contact Marked as Read')
                                 ->success()
                                 ->send();
-                        } catch (Exception $e) {
+                        }),
+                    Tables\Actions\Action::make('Mark as important')
+                        ->hidden(!auth()->user()->can('mark_as_important_contact'))
+                        ->modalHeading('Confirm password to continue')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\TextInput::make('password')
+                                ->label('Your password')
+                                ->required()
+                                ->password()
+                                ->currentPassword(),
+                        ])
+                        ->icon('heroicon-o-exclamation-circle')
+                        ->color('success')
+                        ->visible(fn (Contact $record): bool => $record->is_important == false)
+                        ->action(function (Contact $record) {
+                            $record->is_important = true;
+                            $record->save();
                             Notification::make()
-                                ->title('Error notifying user')
-                                ->body($e->getMessage())
-                                ->danger()
+                                ->title('Contact Marked as important')
+                                ->success()
                                 ->send();
-                        }
-                    }),
-                Tables\Actions\DeleteAction::make()
-                    ->modalHeading('Confirm password to continue')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Your password')
-                            ->required()
-                            ->password()
-                            ->currentPassword(),
-                    ]),
+                        }),
+                    Tables\Actions\Action::make('Mark as not important')
+                        ->hidden(!auth()->user()->can('mark_as_important_contact'))
+                        ->modalHeading('Confirm password to continue')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\TextInput::make('password')
+                                ->label('Your password')
+                                ->required()
+                                ->password()
+                                ->currentPassword(),
+                        ])
+                        ->icon('heroicon-o-exclamation-circle')
+                        ->color('danger')
+                        ->visible(fn (Contact $record): bool => $record->is_important == true)
+                        ->action(function (Contact $record) {
+                            $record->is_important = false;
+                            $record->save();
+                            Notification::make()
+                                ->title('Contact Marked as not important')
+                                ->success()
+                                ->send();
+                        }),
+                    Tables\Actions\DeleteAction::make()
+                        ->modalHeading('Confirm password to continue')
+                        ->requiresConfirmation()
+                        ->form([
+                            Forms\Components\TextInput::make('password')
+                                ->label('Your password')
+                                ->required()
+                                ->password()
+                                ->currentPassword(),
+                        ]),
+                    Tables\Actions\Action::make('reply')
+                        ->hidden(!auth()->user()->can('reply_contact'))
+                        ->color('primary')
+                        ->form(function (Contact $record) {
+                            return [
+                                Forms\Components\TextInput::make('password')
+                                    ->label('Your password')
+                                    ->required()
+                                    ->password()
+                                    ->currentPassword(),
+                                Forms\Components\TextInput::make('email')
+                                    ->default($record->email)
+                                    ->required()
+                                    ->label('email')
+                                    ->placeholder('email'),
+                                Forms\Components\Textarea::make('message')
+                                    ->required()
+                                    ->label('Message')
+                                    ->placeholder('Message'),
+                            ];
+                        })
+                        ->requiresConfirmation()
+                        ->action(function (array $data, Contact $record) {
+                            try {
+                                $record->read_at = now();
+                                $record->save();
+                                Mail::to($data['email'])->send(new ReplyToContact($data['message']));
+                                Notification::make()
+                                    ->title('User notified')
+                                    ->success()
+                                    ->send();
+                            } catch (Exception $e) {
+                                Notification::make()
+                                    ->title('Error notifying user')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ])
+                ->button()
+                ->label('Actions'),
             ])
             ->bulkActions([
                 //

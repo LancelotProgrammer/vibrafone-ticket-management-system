@@ -26,9 +26,9 @@ class HomePageController extends Controller
         }
 
         $validator = Validator::make($request->all(), [
-            'firstName' => 'required',
-            'lastName' => 'required',
+            'name' => 'required',
             'email' => 'required|email',
+            'subject' => 'required',
             'description' => 'required',
         ]);
 
@@ -37,10 +37,10 @@ class HomePageController extends Controller
         }
 
         Contact::create([
-            'first_name' => $request->firstName,
-            'last_name' => $request->lastName,
+            'name' => $request->name,
             'email' => $request->email,
-            'feedback' => $request->description,
+            'subject' => $request->subject,
+            'description' => $request->description,
         ]);
 
         RateLimiter::hit($request->ip(), 60*60*24);
