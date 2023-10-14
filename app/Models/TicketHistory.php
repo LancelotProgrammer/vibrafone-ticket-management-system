@@ -14,6 +14,7 @@ class TicketHistory extends Model
         'ticket_id',
         'owner',
         'title',
+        'body',
         'work_order',
         'sub_work_order',
         'status',

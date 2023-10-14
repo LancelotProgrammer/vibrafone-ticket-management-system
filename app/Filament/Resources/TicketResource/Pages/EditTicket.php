@@ -511,6 +511,7 @@ class EditTicket extends EditRecord
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
                             'title' => $data['title'],
+                            'body' => $data['body'] ?? null,
                             'owner' => auth()->user()->email,
                             'work_order' => $data['work_order'],
                             'sub_work_order' => $data['sub_work_order'],
