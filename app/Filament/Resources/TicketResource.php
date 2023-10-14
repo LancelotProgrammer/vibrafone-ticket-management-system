@@ -18,6 +18,7 @@ use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\Type;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Carbon\Carbon;
 use Exception;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -145,11 +146,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 Forms\Components\Section::make('Ticket Files')
                                     ->schema([
                                         Forms\Components\FileUpload::make('customer_attachments')
-                                            ->disabled(function (Page $livewire) {
-                                                if ($livewire instanceof EditTicket) {
-                                                    return true;
-                                                }
-                                            })
                                             ->acceptedFileTypes([
                                                 'application/pdf',
                                                 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
@@ -264,9 +260,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->columnSpan(4)
                                     ->columns(3),
                                 Forms\Components\Section::make('Ticket Work Order')
-                                    ->visible(function (Page $livewire) {
-                                        return $livewire instanceof EditTicket;
-                                    })
                                     ->schema([
                                         Forms\Components\Select::make('work_order')
                                             ->disabled()
@@ -691,7 +684,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     })
                     ->action(function (Ticket $record): void {
                         DB::transaction(function () use ($record) {
-                            $record->deleted_at = now();
+                            $record->deleted_at = Carbon::now()->toDateTimeString();
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
                                 'title' => 'ticket has been archived',
@@ -700,7 +693,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 'sub_work_order' => $record->sub_work_order,
                                 'status' => $record->status,
                                 'handler' => $record->handler,
-                                'created_at' => now(),
+                                'created_at' => Carbon::now()->toDateTimeString(),
                             ]);
                             $record->ticketHistory()->save($ticketHistory);
                             $record->save();
@@ -762,11 +755,11 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     'sub_work_order' => $record->sub_work_order,
                                     'status' => $record->status,
                                     'handler' => $record->handler,
-                                    'created_at' => now(),
+                                    'created_at' => Carbon::now()->toDateTimeString(),
                                 ]);
                                 $record->ticketHistory()->save($ticketHistory);
                                 if (is_null($record->start_at)) {
-                                    $record->start_at = now();
+                                    $record->start_at = Carbon::now()->toDateTimeString();
                                 }
                                 $record->save();
                             });

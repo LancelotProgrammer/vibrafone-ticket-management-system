@@ -10,6 +10,7 @@ use App\Mail\TicketCreated;
 use App\Models\Level;
 use App\Models\TicketHistory;
 use App\Models\User;
+use Carbon\Carbon;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -35,7 +36,7 @@ class CreateTicket extends CreateRecord
                 'sub_work_order' => null,
                 'status' => TicketStatus::IN_PROGRESS->value,
                 'handler' => TicketHandler::TECHNICAL_SUPPORT->value,
-                'created_at' => now(),
+                'created_at' => Carbon::now()->toDateTimeString(),
             ]);
             $created->ticketHistory()->save($ticketHistory);
             $created->save();

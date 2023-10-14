@@ -14,6 +14,7 @@ use App\Models\Level;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\User;
+use Carbon\Carbon;
 use Exception;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
@@ -75,7 +76,7 @@ class EditTicket extends EditRecord
                             'sub_work_order' => $record->sub_work_order,
                             'status' => $record->status,
                             'handler' => $record->handler,
-                            'created_at' => now(),
+                            'created_at' => Carbon::now()->toDateTimeString(),
                         ]);
                         $record->ticketHistory()->save($ticketHistory);
                         $record->save();
@@ -130,12 +131,12 @@ class EditTicket extends EditRecord
                             'sub_work_order' => $record->sub_work_order,
                             'status' => $record->status,
                             'handler' => $record->handler,
-                            'created_at' => now(),
+                            'created_at' => Carbon::now()->toDateTimeString(),
                         ]);
                         $record->ticketHistory()->save($ticketHistory);
                         $record->save();
                         if (is_null($record->start_at)) {
-                            $record->start_at = now();
+                            $record->start_at = Carbon::now()->toDateTimeString();
                         }
                         $this->refreshFormData([
                             'technical_support_user_id',
@@ -451,7 +452,7 @@ class EditTicket extends EditRecord
                             $handler = TicketHandler::CUSTOMER->value;
                             $record->work_order = $data['work_order'];
                             $record->sub_work_order = null;
-                            $record->end_at = now();
+                            $record->end_at = Carbon::now()->toDateTimeString();
                             $redirectFlag = true;
                         }
                         if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value) {
@@ -517,7 +518,7 @@ class EditTicket extends EditRecord
                             'sub_work_order' => $data['sub_work_order'],
                             'status' => $status,
                             'handler' => $handler,
-                            'created_at' => now(),
+                            'created_at' => Carbon::now()->toDateTimeString(),
                         ]);
                         $record->ticketHistory()->save($ticketHistory);
                         $record->save();
@@ -574,7 +575,7 @@ class EditTicket extends EditRecord
                                     'sub_work_order' => $record->sub_work_order,
                                     'status' => $record->status,
                                     'handler' => $record->handler,
-                                    'created_at' => now(),
+                                    'created_at' => Carbon::now()->toDateTimeString(),
                                 ]);
                                 $record->ticketHistory()->save($ticketHistory);
                                 $record->save();
@@ -622,7 +623,7 @@ class EditTicket extends EditRecord
                                 'sub_work_order' => $record->sub_work_order,
                                 'status' => $record->status,
                                 'handler' => $record->handler,
-                                'created_at' => now(),
+                                'created_at' => Carbon::now()->toDateTimeString(),
                             ]);
                             $record->ticketHistory()->save($ticketHistory);
                             $record->save();
@@ -667,7 +668,7 @@ class EditTicket extends EditRecord
                                     'sub_work_order' => $record->sub_work_order,
                                     'status' => $record->status,
                                     'handler' => $record->handler,
-                                    'created_at' => now(),
+                                    'created_at' => Carbon::now()->toDateTimeString(),
                                 ]);
                                 $record->ticketHistory()->save($ticketHistory);
                                 $record->save();
@@ -715,7 +716,7 @@ class EditTicket extends EditRecord
                                 'sub_work_order' => $record->sub_work_order,
                                 'status' => $record->status,
                                 'handler' => $record->handler,
-                                'created_at' => now(),
+                                'created_at' => Carbon::now()->toDateTimeString(),
                             ]);
                             $record->ticketHistory()->save($ticketHistory);
                             $record->save();
