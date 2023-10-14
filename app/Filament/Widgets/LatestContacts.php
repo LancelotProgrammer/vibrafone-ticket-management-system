@@ -27,4 +27,9 @@ class LatestContacts extends BaseWidget
                 Tables\Columns\TextColumn::make('subject'),
             ]);
     }
+
+    public static function canView(): bool
+    {
+        return auth()->user()->can('widget_LatestContacts');
+    }
 }

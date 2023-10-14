@@ -66,6 +66,9 @@ class TicketResource extends Resource implements HasShieldPermissions
             'assign',
             'create_work_order_type',
             'archive',
+
+            'edit_history_date',
+            'view_history',
         ];
     }
 

@@ -24,4 +24,9 @@ class StatsOverview extends BaseWidget
             Stat::make('User Count', User::count()),
         ];
     }
+
+    public static function canView(): bool
+    {
+        return auth()->user()->can('widget_StatsOverview');
+    }
 }

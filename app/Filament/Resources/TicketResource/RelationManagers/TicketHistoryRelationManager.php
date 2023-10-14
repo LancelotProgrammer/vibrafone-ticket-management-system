@@ -9,6 +9,7 @@ use Filament\Tables;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TicketHistoryRelationManager extends RelationManager
@@ -47,7 +48,8 @@ class TicketHistoryRelationManager extends RelationManager
                 //
             ])
             ->actions([
-                EditAction::make(),
+                EditAction::make()
+                    ->hidden(!(auth()->user()->can('edit_history_date_ticket'))),
             ])
             ->bulkActions([
                 //
@@ -55,5 +57,10 @@ class TicketHistoryRelationManager extends RelationManager
             ->emptyStateActions([
                 //
             ]);
+    }
+
+    public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool
+    {
+        return auth()->user()->can('view_history_ticket');
     }
 }
