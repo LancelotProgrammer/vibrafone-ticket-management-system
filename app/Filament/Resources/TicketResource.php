@@ -77,6 +77,8 @@ class TicketResource extends Resource implements HasShieldPermissions
     {
         return $form
             ->schema([
+
+                //NOTE: create form
                 Forms\Components\Section::make('Create Info')
                     ->visible(function (Page $livewire) {
                         return $livewire instanceof CreateTicket;
@@ -162,6 +164,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->columnSpan(3)
                             ->columns(4),
                     ]),
+
+                //NOTE: edit form
                 Forms\Components\Section::make('Edit Info')
                     ->visible(function (Page $livewire) {
                         return $livewire instanceof EditTicket;
@@ -350,6 +354,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->columnSpan(3)
                             ->columns(4),
                     ]),
+
+                //NOTE: view form
                 Forms\Components\Section::make('View Info')
                     ->visible(function (Page $livewire) {
                         return $livewire instanceof ViewTicket;
@@ -359,61 +365,28 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->visible(function ($record) {
                                 return !is_null($record->deleted_at);
                             })
-                            ->disabled()
                             ->columnSpan(3)
                             ->label('Archive At'),
                         Forms\Components\Section::make('Ticket Info')
                             ->schema([
-                                Forms\Components\TextInput::make('ticket_identifier')
-                                    ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->required()
-                                    ->maxLength(64),
-                                Forms\Components\TextInput::make('title')
-                                    ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->required()
-                                    ->maxLength(64),
-                                Forms\Components\TextInput::make('ne_product')
-                                    ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->required()
-                                    ->maxLength(64),
-                                Forms\Components\TextInput::make('sw_version')
-                                    ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->required()
-                                    ->maxLength(64),
+                                Forms\Components\TextInput::make('ticket_identifier'),
+                                Forms\Components\TextInput::make('title'),
+                                Forms\Components\TextInput::make('ne_product'),
+                                Forms\Components\TextInput::make('sw_version'),
                                 Forms\Components\Textarea::make('description')
-                                    ->disabled(true)
-                                    ->dehydrated(true)
-                                    ->required()
-                                    ->columnSpanFull()
-                                    ->maxLength(512),
+                                    ->columnSpanFull(),
                                 Forms\Components\Section::make('Ticket Meta Data')
                                     ->schema([
                                         Forms\Components\Select::make('type_id')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->required()
                                             ->label('Type')
                                             ->options(Type::all()->pluck('title', 'id')),
                                         Forms\Components\Select::make('priority_id')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->required()
                                             ->label('Priority')
                                             ->options(Priority::all()->pluck('title', 'id')),
                                         Forms\Components\Select::make('department_id')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->required()
                                             ->label('Department')
                                             ->options(Department::all()->where('title', '!=', 'default')->pluck('title', 'id')),
                                         Forms\Components\Select::make('category_id')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->required()
                                             ->label('Category')
                                             ->options(Category::all()->pluck('title', 'id')),
                                     ])
@@ -422,50 +395,20 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 Forms\Components\Section::make('Ticket Files')
                                     ->schema([
                                         Forms\Components\FileUpload::make('customer_attachments')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->acceptedFileTypes([
-                                                'application/pdf',
-                                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                                'image/jpeg',
-                                                'image/png',
-                                            ])
-                                            ->openable()
-                                            ->columnSpanFull()
-                                            ->multiple(),
+                                            ->downloadable()
+                                            ->openable(),
                                         Forms\Components\FileUpload::make('technical_support_attachments')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->acceptedFileTypes([
-                                                'application/pdf',
-                                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                                'image/jpeg',
-                                                'image/png',
-                                            ])
-                                            ->openable()
                                             ->downloadable()
-                                            ->columnSpanFull()
-                                            ->multiple(),
+                                            ->openable(),
                                         Forms\Components\FileUpload::make('high_technical_support_attachments')
-                                            ->disabled(true)
-                                            ->dehydrated(true)
-                                            ->acceptedFileTypes([
-                                                'application/pdf',
-                                                'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                                'image/jpeg',
-                                                'image/png',
-                                            ])
-                                            ->openable()
                                             ->downloadable()
-                                            ->columnSpanFull()
-                                            ->multiple(),
+                                            ->openable(),
                                     ])
                                     ->columnSpan(4)
                                     ->columns(3),
                                 Forms\Components\Section::make('Ticket Work Order')
                                     ->schema([
                                         Forms\Components\Select::make('work_order')
-                                            ->disabled()
                                             ->options([
                                                 'Customer' => [
                                                     TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
@@ -482,7 +425,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                                                 ],
                                             ]),
                                         Forms\Components\Select::make('sub_work_order')
-                                            ->disabled()
                                             ->options([
                                                 'Feedback to Customer' => [
                                                     TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
@@ -496,7 +438,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                                                 ],
                                             ]),
                                         Forms\Components\Select::make('status')
-                                            ->disabled()
                                             ->options([
                                                 TicketStatus::IN_PROGRESS->value => 'In Progress',
                                                 TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
@@ -507,7 +448,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                                                 TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
                                             ]),
                                         Forms\Components\Select::make('handler')
-                                            ->disabled()
                                             ->options([
                                                 TicketHandler::CUSTOMER->value => 'Customer',
                                                 TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
@@ -520,32 +460,20 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->schema([
                                         Forms\Components\Select::make('customer')
                                             ->multiple()
-                                            ->relationship('customer', 'email')
-                                            ->disabled(true)
-                                            ->dehydrated(true),
+                                            ->relationship('customer', 'email'),
                                         Forms\Components\Select::make('technical_support')
                                             ->multiple()
-                                            ->relationship('technicalSupport', 'email')
-                                            ->disabled(true)
-                                            ->dehydrated(true),
+                                            ->relationship('technicalSupport', 'email'),
                                         Forms\Components\Select::make('high_technical_support')
                                             ->multiple()
-                                            ->relationship('highTechnicalSupport', 'email')
-                                            ->disabled(true)
-                                            ->dehydrated(true),
+                                            ->relationship('highTechnicalSupport', 'email'),
                                     ])
                                     ->columnSpan(4)
                                     ->columns(3),
                                 Forms\Components\Section::make('Ticket Proccess Time')
                                     ->schema([
-                                        Forms\Components\DateTimePicker::make('start_at')
-                                            ->live()
-                                            ->disabled(true)
-                                            ->dehydrated(true),
-                                        Forms\Components\DateTimePicker::make('end_at')
-                                            ->live()
-                                            ->disabled(true)
-                                            ->dehydrated(true),
+                                        Forms\Components\DateTimePicker::make('start_at'),
+                                        Forms\Components\DateTimePicker::make('end_at'),
                                     ])
                                     ->columnSpan(4)
                                     ->columns(2),

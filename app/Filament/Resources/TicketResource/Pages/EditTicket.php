@@ -149,7 +149,7 @@ class EditTicket extends EditRecord
                         ->send();
                 }),
 
-            //NOTE: manage
+            //NOTE: create work order type
             Actions\Action::make('create_work_order_type')
                 ->hidden(!(auth()->user()->can('create_work_order_type_ticket')))
                 ->visible(function (Ticket $record) {
@@ -162,10 +162,10 @@ class EditTicket extends EditRecord
                     return $record->technicalSupport->count() > 0;
                 })
                 ->form([
+
+                    //NOTE: create_work_order_type form
                     Section::make()
                         ->schema([
-
-                            //NOTE: create_work_order_type form
                             Select::make('work_order')
                                 ->required()
                                 ->live()
@@ -542,7 +542,6 @@ class EditTicket extends EditRecord
             ActionGroup::make([
                 Actions\Action::make('add_technical_support')
                     ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                    ->requiresConfirmation()
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -552,6 +551,7 @@ class EditTicket extends EditRecord
                         }
                         return $record->technicalSupport->count() >= 1;
                     })
+                    ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
                             ->label('Technical Support User')
@@ -593,7 +593,6 @@ class EditTicket extends EditRecord
                     }),
                 Actions\Action::make('remove_technical_support')
                     ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                    ->requiresConfirmation()
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -603,6 +602,7 @@ class EditTicket extends EditRecord
                         }
                         return $record->technicalSupport->count() >= 2;
                     })
+                    ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
                             ->label('Technical Support User')
@@ -635,7 +635,6 @@ class EditTicket extends EditRecord
                     }),
                 Actions\Action::make('add_high_technical_support')
                     ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                    ->requiresConfirmation()
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -645,6 +644,7 @@ class EditTicket extends EditRecord
                         }
                         return $record->highTechnicalSupport->count() >= 1;
                     })
+                    ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
                             ->label('High Technical Support User')
@@ -686,7 +686,6 @@ class EditTicket extends EditRecord
                     }),
                 Actions\Action::make('remove_high_technical_support')
                     ->hidden(!(auth()->user()->can('manage_user_ticket')))
-                    ->requiresConfirmation()
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -696,6 +695,7 @@ class EditTicket extends EditRecord
                         }
                         return $record->highTechnicalSupport->count() >= 2;
                     })
+                    ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
                             ->label('High Technical Support User')
