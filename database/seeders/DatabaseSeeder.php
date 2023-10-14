@@ -8,7 +8,7 @@ use Illuminate\Support\Facades\DB;
 
 class DatabaseSeeder extends Seeder
 {
-    private $truncateTablesFlag = true;
+    private $truncateTablesFlag = false;
 
     public function run(): void
     {
