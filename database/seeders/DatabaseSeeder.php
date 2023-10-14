@@ -9,11 +9,12 @@ use Illuminate\Support\Facades\DB;
 class DatabaseSeeder extends Seeder
 {
     private $truncateTablesFlag = false;
+    private $seeder = true;
 
     public function run(): void
     {
-        if ($this->truncateTablesFlag) {
-            if (\Illuminate\Support\Facades\App::environment('local')) {
+        if (\Illuminate\Support\Facades\App::environment('local')) {
+            if ($this->truncateTablesFlag) {
                 if (config('database.default') == 'mysql') {
                     DB::statement('SET FOREIGN_KEY_CHECKS=0');
                 }
@@ -47,7 +48,8 @@ class DatabaseSeeder extends Seeder
                 if (config('database.default') == 'mysql') {
                     DB::statement('SET FOREIGN_KEY_CHECKS=1');
                 }
-
+            }
+            if ($this->seeder) {
                 $this->call(CountrySeeder::class);
                 $this->call(PrioritySeeder::class);
                 $this->call(TypeSeeder::class);
