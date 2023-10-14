@@ -81,14 +81,14 @@ class EditTicket extends EditRecord
                         $record->ticketHistory()->save($ticketHistory);
                         $record->save();
                         $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
-                        Mail::to($this->record->customer)->send(new TicketEscalation(EmailType::CUSTOMER, $title));
+                        Mail::to($this->record->customer)->queue(new TicketEscalation(EmailType::CUSTOMER, $title));
                         foreach (User::whereHas('roles', function ($query) {
                             $query->where('name', 'super_admin')->orWhere('name', 'manager');
                         })->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation(EmailType::ADMIN, $title));
+                            Mail::to($recipient)->queue(new TicketEscalation(EmailType::ADMIN, $title));
                         }
                         foreach (User::where('department_id', $this->record->department_id)->where('level_id', 3)->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation(EmailType::HIGH_TECHNICAL_SUPPORT, $title));
+                            Mail::to($recipient)->queue(new TicketEscalation(EmailType::HIGH_TECHNICAL_SUPPORT, $title));
                         }
                         $this->refreshFormData([
                             'high_technical_support_user_id',
@@ -401,7 +401,7 @@ class EditTicket extends EditRecord
                                 $handler = TicketHandler::CUSTOMER->value;
                                 $record->work_order = $data['work_order'];
                                 $record->sub_work_order = $data['sub_work_order'];
-                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                                Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                             }
                             if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value) {
                                 $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
@@ -410,7 +410,7 @@ class EditTicket extends EditRecord
                                 $handler = TicketHandler::CUSTOMER->value;
                                 $record->work_order = $data['work_order'];
                                 $record->sub_work_order = $data['sub_work_order'];
-                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                                Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                             }
                             if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
                                 $record->status = TicketStatus::CUSTOMER_UNDER_MONITORING->value;
@@ -419,7 +419,7 @@ class EditTicket extends EditRecord
                                 $handler = TicketHandler::CUSTOMER->value;
                                 $record->work_order = $data['work_order'];
                                 $record->sub_work_order = $data['sub_work_order'];
-                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                                Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                             }
                         }
                         if ($data['work_order'] == TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value) {
@@ -429,7 +429,7 @@ class EditTicket extends EditRecord
                             $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                             $record->work_order = $data['work_order'];
                             $record->sub_work_order = null;
-                            Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                         }
                         if ($data['work_order'] == TicketWorkOrder::CUSTOMER_RESPONSE->value) {
                             $record->status = TicketStatus::IN_PROGRESS->value;
@@ -463,7 +463,7 @@ class EditTicket extends EditRecord
                                 $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                                 $record->work_order = $data['work_order'];
                                 $record->sub_work_order = $data['sub_work_order'];
-                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                                Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                             }
                             if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value) {
                                 $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
@@ -472,7 +472,7 @@ class EditTicket extends EditRecord
                                 $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                                 $record->work_order = $data['work_order'];
                                 $record->sub_work_order = $data['sub_work_order'];
-                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                                Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                             }
                             if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
                                 $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
@@ -481,7 +481,7 @@ class EditTicket extends EditRecord
                                 $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                                 $record->work_order = $data['work_order'];
                                 $record->sub_work_order = $data['sub_work_order'];
-                                Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                                Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                             }
                         }
                         if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
@@ -491,7 +491,7 @@ class EditTicket extends EditRecord
                             $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
                             $record->work_order = $data['work_order'];
                             $record->sub_work_order = null;
-                            Mail::to($data['to'])->send(new TicketWorkOrderMail($data));
+                            Mail::to($data['to'])->queue(new TicketWorkOrderMail($data));
                         }
                         if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
                             $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
