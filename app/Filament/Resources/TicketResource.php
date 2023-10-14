@@ -116,10 +116,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                                             ->label('Department')
                                             ->live()
                                             ->afterStateUpdated(function ($state, $set) {
-                                                $ticketIdentifier = null;
-                                                do {
-                                                    $ticketIdentifier = Department::where('id', $state)->first()->code . '-' . floor(rand(500, 999) * 10000) . '-' . rand(500, 999)  . '-' . rand(500, 999);
-                                                } while (is_null(Ticket::where('ticket_identifier', $ticketIdentifier)->get()));
+                                                $latestTicketIdentifier = Ticket::where('department_id', $state)->latest()->value('ticket_identifier');
+                                                $ticketIdentifier = 1;
+                                                if ($latestTicketIdentifier !== null) {
+                                                    $parts = explode('-', $latestTicketIdentifier);
+                                                    $ticketIdentifier = intval($parts[1]) + 1;
+                                                }
+                                                $ticketIdentifier = Department::where('id', $state)->first()->code . '-' . str_pad($ticketIdentifier, 6, '0', STR_PAD_LEFT);
                                                 $set(
                                                     'ticket_identifier',
                                                     $ticketIdentifier
