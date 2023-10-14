@@ -55,6 +55,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             'delete_any',
 
             'view_all',
+            'export',
             'edit_all',
 
             'manage_user',
@@ -777,9 +778,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     }),
             ])
             ->bulkActions([
-                Tables\Actions\BulkActionGroup::make([
-                    ExportBulkAction::make(),
-                ]),
+                //
             ])
             ->emptyStateActions([
                 Tables\Actions\CreateAction::make(),
