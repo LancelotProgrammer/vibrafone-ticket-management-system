@@ -9,7 +9,7 @@ use Illuminate\Support\Facades\DB;
 class DatabaseSeeder extends Seeder
 {
     private $truncateTablesFlag = false;
-    private $seeder = true;
+    private $seeder = false;
 
     public function run(): void
     {

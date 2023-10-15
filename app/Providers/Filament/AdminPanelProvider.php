@@ -2,6 +2,7 @@
 
 namespace App\Providers\Filament;
 
+use App\Filament\Pages\Auth\ProfilePage;
 use App\Filament\Pages\Auth\RegisterPage;
 use BezhanSalleh\FilamentShield\FilamentShieldPlugin;
 use Filament\Http\Middleware\Authenticate;
@@ -29,7 +30,7 @@ class AdminPanelProvider extends PanelProvider
             ->path('admin')
             ->login()
             ->registration(RegisterPage::class)
-            ->profile()
+            ->profile(ProfilePage::class)
             ->plugins([
                 FilamentShieldPlugin::make()
             ])
