@@ -140,7 +140,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                             }),
                                         Forms\Components\Select::make('category_id')
                                             ->required()
-                                            ->label('Category')
+                                            ->label('Technology')
                                             ->options(Category::all()->pluck('title', 'id')),
                                     ])
                                     ->columnSpan(4)

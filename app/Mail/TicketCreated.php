@@ -10,7 +10,7 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class TicketCreated extends Mailable  implements ShouldQueue
+class TicketCreated extends Mailable implements ShouldQueue
 {
     use Queueable, SerializesModels;
 
@@ -32,19 +32,16 @@ class TicketCreated extends Mailable  implements ShouldQueue
         if ($this->type == EmailType::ADMIN) {
             return new Envelope(
                 subject: $this->title,
-                from: '',
             );
         }
         if ($this->type == EmailType::CUSTOMER) {
             return new Envelope(
                 subject: $this->title,
-                from: '',
             );
         }
         if ($this->type == EmailType::TECHNICAL_SUPPORT) {
             return new Envelope(
                 subject: $this->title,
-                from: '',
             );
         }
     }
