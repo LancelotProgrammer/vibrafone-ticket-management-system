@@ -15,9 +15,14 @@ class TicketHistory extends Model
         'owner',
         'title',
         'body',
+        'attachments',
         'work_order',
         'sub_work_order',
         'status',
         'handler',
+    ];
+
+    protected $casts = [
+        'attachments' => 'array',
     ];
 }

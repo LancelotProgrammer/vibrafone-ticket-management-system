@@ -14,5 +14,6 @@ class Priority extends Model
     protected $fillable = [
         'title',
         'description',
+        'type_id'
     ];
 }

@@ -19,13 +19,12 @@ class Ticket extends Model
         'category_id',
         'title',
         'description',
+        'company',
         'ne_product',
         'sw_version',
         'work_order',
         'sub_work_order',
-        'customer_attachments',
-        'technical_support_attachments',
-        'high_technical_support_attachments',
+        'attachments',
         'status',
         'handler',
         'start_at',
@@ -33,9 +32,7 @@ class Ticket extends Model
     ];
 
     protected $casts = [
-        'customer_attachments' => 'array',
-        'technical_support_attachments' => 'array',
-        'high_technical_support_attachments' => 'array',
+        'attachments' => 'array',
     ];
 
     public function type()

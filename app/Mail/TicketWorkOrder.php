@@ -3,21 +3,23 @@
 namespace App\Mail;
 
 use Illuminate\Bus\Queueable;
-use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Mail\Mailable;
+use Illuminate\Mail\Mailables\Attachment;
 use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
+use Illuminate\Support\Facades\Storage;
 
-class TicketWorkOrder extends Mailable implements ShouldQueue
+class TicketWorkOrder extends Mailable
 {
     use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
      */
-    public function __construct(private readonly array $data)
-    {
+    public function __construct(
+        private readonly array $data,
+    ) {
         //
     }
 
@@ -54,6 +56,13 @@ class TicketWorkOrder extends Mailable implements ShouldQueue
      */
     public function attachments(): array
     {
-        return [];
+        if (count($this->data['attachments']) <= 0) {
+            return [];
+        } else {
+            foreach ($this->data['attachments'] as $attachment) {
+                $array[] = Attachment::fromPath(public_path(Storage::url($attachment)));
+            }
+            return $array;
+        }
     }
 }

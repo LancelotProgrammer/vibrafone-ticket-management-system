@@ -51,8 +51,8 @@ class DatabaseSeeder extends Seeder
             }
             if ($this->seeder) {
                 $this->call(CountrySeeder::class);
-                $this->call(PrioritySeeder::class);
                 $this->call(TypeSeeder::class);
+                $this->call(PrioritySeeder::class);
                 $this->call(CategorySeeder::class);
                 $this->call(DepartmentSeeder::class);
                 $this->call(LevelSeeder::class);

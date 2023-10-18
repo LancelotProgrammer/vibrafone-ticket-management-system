@@ -7,6 +7,7 @@ use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Actions\EditAction;
+use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -21,6 +22,10 @@ class TicketHistoryRelationManager extends RelationManager
         return $form
             ->schema([
                 Forms\Components\DateTimePicker::make('created_at')
+                    ->columnSpanFull(),
+                Forms\Components\FileUpload::make('attachments')
+                    ->openable()
+                    ->disabled()
                     ->columnSpanFull(),
             ]);
     }
@@ -51,6 +56,8 @@ class TicketHistoryRelationManager extends RelationManager
             ->actions([
                 EditAction::make()
                     ->hidden(!(auth()->user()->can('edit_history_date_ticket'))),
+                ViewAction::make()
+                    ->label('View Attachments'),
             ])
             ->bulkActions([
                 //

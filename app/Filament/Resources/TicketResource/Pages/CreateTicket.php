@@ -38,6 +38,7 @@ class CreateTicket extends CreateRecord
                 'owner' => auth()->user()->email,
                 'work_order' => null,
                 'sub_work_order' => null,
+                'attachments' => $data['attachments'],
                 'status' => TicketStatus::IN_PROGRESS->value,
                 'handler' => TicketHandler::TECHNICAL_SUPPORT->value,
                 'created_at' => Carbon::now()->toDateTimeString(),

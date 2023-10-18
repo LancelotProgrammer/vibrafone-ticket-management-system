@@ -5,6 +5,7 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\PriorityResource\Pages;
 use App\Filament\Resources\PriorityResource\RelationManagers;
 use App\Models\Priority;
+use App\Models\Type;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\Resource;
@@ -32,6 +33,10 @@ class PriorityResource extends Resource
                             ->maxLength(64),
                         Forms\Components\TextInput::make('description')
                             ->maxLength(512),
+                        Forms\Components\Select::make('type_id')
+                            ->required()
+                            ->label('Type')
+                            ->options(Type::all()->pluck('title', 'id')),
                     ]),
             ]);
     }

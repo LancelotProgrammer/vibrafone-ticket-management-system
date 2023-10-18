@@ -1,3 +1,4 @@
+DROP DATABASE vtms_db;
 CREATE DATABASE IF NOT EXISTS vtms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE vtms_db;
 CREATE TABLE IF NOT EXISTS countries (
@@ -8,21 +9,23 @@ CREATE TABLE IF NOT EXISTS countries (
     country_code VARCHAR(8) UNIQUE NOT NULL,
     dial_code VARCHAR(8) NOT NULL
 );
-CREATE TABLE IF NOT EXISTS types (
-    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-    title VARCHAR(64) NOT NULL,
-    description VARCHAR(512)
-);
 CREATE TABLE IF NOT EXISTS levels (
     id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(64) NOT NULL,
     code VARCHAR(64) NOT NULL,
     description VARCHAR(512)
 );
-CREATE TABLE IF NOT EXISTS priorities (
+CREATE TABLE IF NOT EXISTS types (
     id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     title VARCHAR(64) NOT NULL,
     description VARCHAR(512)
+);
+CREATE TABLE IF NOT EXISTS priorities (
+    id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    title VARCHAR(64) NOT NULL,
+    description VARCHAR(512),
+    type_id BIGINT UNSIGNED NOT NULL,
+    CONSTRAINT FK_Priorities_Types FOREIGN KEY (type_id) REFERENCES types (id) ON UPDATE CASCADE ON DELETE RESTRICT
 );
 CREATE TABLE IF NOT EXISTS departments (
     id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
@@ -63,6 +66,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     category_id BIGINT UNSIGNED NOT NULL,
     title VARCHAR(64) NOT NULL,
     description VARCHAR(512) NOT NULL,
+    company TEXT NULL,
     ne_product VARCHAR(64) NOT NULL,
     sw_version VARCHAR(64) NOT NULL,
     work_order VARCHAR(64) NULL DEFAULT NULL,
@@ -71,9 +75,7 @@ CREATE TABLE IF NOT EXISTS tickets (
     handler VARCHAR(64) NULL DEFAULT NULL,
     start_at DATETIME NULL DEFAULT NULL,
     end_at DATETIME NULL DEFAULT NULL,
-    customer_attachments json NULL,
-    technical_support_attachments json NULL,
-    high_technical_support_attachments json NULL,
+    attachments json NULL,
     created_at DATETIME DEFAULT NOW(),
     deleted_at DATETIME NULL DEFAULT NULL,
     updated_at DATETIME NULL DEFAULT NULL ON UPDATE NOW(),
@@ -124,6 +126,7 @@ CREATE TABLE IF NOT EXISTS ticket_histories (
     sub_work_order VARCHAR(64) NULL DEFAULT NULL,
     status VARCHAR(64) NULL DEFAULT NULL,
     handler VARCHAR(64) NULL DEFAULT NULL,
+    attachments json NULL,
     created_at DATETIME DEFAULT NOW(),
     updated_at DATETIME NULL DEFAULT NULL ON UPDATE NOW(),
     CONSTRAINT FK_TicketHistory_Tickets FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON UPDATE CASCADE ON DELETE CASCADE
