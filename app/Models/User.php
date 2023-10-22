@@ -57,16 +57,16 @@ class User extends Authenticatable  implements FilamentUser
 
     public function customerTickets()
     {
-        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'user_id', 'ticket_id');
+        return $this->belongsToMany('App\Models\Ticket', 'ticket_customer', 'user_id', 'ticket_id');
     }
 
     public function technicalSupportTickets()
     {
-        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'user_id', 'ticket_id');
+        return $this->belongsToMany('App\Models\Ticket', 'ticket_technical_support', 'user_id', 'ticket_id');
     }
 
     public function highTechnicalSupportTickets()
     {
-        return $this->belongsToMany('App\Models\User', 'ticket_customer', 'user_id', 'ticket_id');
+        return $this->belongsToMany('App\Models\Ticket', 'ticket_high_technical_support', 'user_id', 'ticket_id');
     }
 }
