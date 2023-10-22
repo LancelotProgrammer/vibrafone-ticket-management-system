@@ -194,7 +194,7 @@ class EditTicket extends EditRecord
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('from', auth()->user()->email);
-                                        $set('to', $record->customer->first()->email);
+                                        $set('to', null);
                                     }
                                     if ($state == TicketWorkOrder::CUSTOMER_RESPONSE->value) {
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
@@ -228,7 +228,7 @@ class EditTicket extends EditRecord
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('from', auth()->user()->email);
-                                        $set('to', $record->customer->first()->email);
+                                        $set('to', null);
                                     }
                                     if ($state == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
@@ -307,7 +307,7 @@ class EditTicket extends EditRecord
                                         $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                         $set('from', auth()->user()->email);
-                                        $set('to', $record->customer->first()->email);
+                                        $set('to', null);
                                     }
                                 })
                                 ->required(function ($get) {
