@@ -127,6 +127,7 @@ class UserResource extends Resource implements HasShieldPermissions
                 Tables\Columns\TextColumn::make('department.title'),
                 Tables\Columns\TextColumn::make('level.title'),
                 Tables\Columns\TextColumn::make('email'),
+                Tables\Columns\TextColumn::make('roles.name'),
                 Tables\Columns\TextColumn::make('blocked_at'),
             ])
             ->filters([

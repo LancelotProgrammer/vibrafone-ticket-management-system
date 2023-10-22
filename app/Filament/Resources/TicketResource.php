@@ -359,6 +359,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->columnSpan(4)
                                     ->columns(4),
                                 Forms\Components\Section::make('Ticket Users')
+                                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
                                     ->schema([
                                         Forms\Components\Select::make('customer')
                                             ->multiple()
@@ -546,6 +547,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->columnSpan(4)
                                     ->columns(4),
                                 Forms\Components\Section::make('Ticket Users')
+                                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
                                     ->schema([
                                         Forms\Components\Select::make('customer')
                                             ->multiple()
@@ -696,8 +698,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                         }
                         if (
                             $record->technicalSupport->contains(auth()->user()->id) ||
-                            $record->highTechnicalSupport->contains(auth()->user()->id ||
-                                $record->customer->contains(auth()->user()->id))
+                            $record->highTechnicalSupport->contains(auth()->user()->id) ||
+                            $record->customer->contains(auth()->user()->id)
                         ) {
                             return true;
                         }
