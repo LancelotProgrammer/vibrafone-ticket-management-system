@@ -56,6 +56,8 @@ class TicketResource extends Resource implements HasShieldPermissions
             'delete',
             'delete_any',
 
+            'filter_table',
+
             'view_all',
             'export',
             'edit_all',
@@ -640,12 +642,14 @@ class TicketResource extends Resource implements HasShieldPermissions
             ])
             ->filters([
                 SelectFilter::make('handler')
+                    ->hidden(!(auth()->user()->can('filter_table_ticket')))
                     ->options([
                         TicketHandler::CUSTOMER->value => 'Customer',
                         TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
                         TicketHandler::HIGH_LEVEL_SUPPORT->value => 'High level support',
                     ]),
                 SelectFilter::make('status')
+                    ->hidden(!(auth()->user()->can('filter_table_ticket')))
                     ->options([
                         TicketStatus::IN_PROGRESS->value => 'In Progress',
                         TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
@@ -656,6 +660,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
                     ]),
                 Filter::make('created_at')
+                    ->hidden(!(auth()->user()->can('filter_table_ticket')))
                     ->form([
                         DatePicker::make('created_from'),
                         DatePicker::make('created_until'),
