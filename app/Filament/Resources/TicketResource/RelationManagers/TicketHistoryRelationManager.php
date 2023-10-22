@@ -34,7 +34,11 @@ class TicketHistoryRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                $query->orderByDesc('created_at', 'des');
+                if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                    $query->orderByDesc('created_at', 'des');
+                } else {
+                    $query->where('owner', auth()->user()->email)->orderByDesc('created_at', 'des');
+                }
             })
             ->recordTitleAttribute('title')
             ->columns([
