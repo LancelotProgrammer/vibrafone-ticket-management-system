@@ -27,6 +27,7 @@ use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\ActionSize;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class EditTicket extends EditRecord
@@ -335,7 +336,7 @@ class EditTicket extends EditRecord
                             FileUpload::make('attachments')
                                 ->getUploadedFileNameForStorageUsing(
                                     fn (TemporaryUploadedFile $file, $get): string => (string) str($file->getClientOriginalName())
-                                        ->prepend($get('work_order') . '-'),
+                                        ->prepend(Str::random(10)  . '-' . $get('work_order') . '-'),
                                 )
                                 ->acceptedFileTypes([
                                     'application/pdf',
