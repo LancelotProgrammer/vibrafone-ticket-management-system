@@ -61,8 +61,6 @@ class TicketResource extends Resource implements HasShieldPermissions
             'edit_all',
 
             'manage_user',
-            'manage_technical_support_attachments',
-            'manage_high_technical_support_attachments',
 
             'esclate',
             'assign',
