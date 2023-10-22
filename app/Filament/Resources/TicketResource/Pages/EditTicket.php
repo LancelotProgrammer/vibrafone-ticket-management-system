@@ -60,7 +60,7 @@ class EditTicket extends EditRecord
                                 ->where('level_id', '=', 3)
                                 ->pluck('email', 'id');
                             $managers = User::orWhereHas('roles', function ($query) {
-                                $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                                $query->where('name', 'manager');
                             })
                                 ->pluck('email', 'id');
                             return $users->union($managers);
@@ -121,7 +121,7 @@ class EditTicket extends EditRecord
                                 ->where('level_id', '=', 2)
                                 ->pluck('email', 'id');
                             $managers = User::orWhereHas('roles', function ($query) {
-                                $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                                $query->where('name', 'manager');
                             })
                                 ->pluck('email', 'id');
                             return $users->union($managers);
@@ -598,7 +598,7 @@ class EditTicket extends EditRecord
                                     ->where('level_id', '=', 2)
                                     ->pluck('email', 'id');
                                 $managers = User::orWhereHas('roles', function ($query) {
-                                    $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                                    $query->where('name', 'manager');
                                 })
                                     ->pluck('email', 'id');
                                 return $users->union($managers);
@@ -695,7 +695,7 @@ class EditTicket extends EditRecord
                                     ->where('level_id', '=', 3)
                                     ->pluck('email', 'id');
                                 $managers = User::orWhereHas('roles', function ($query) {
-                                    $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                                    $query->where('name', 'manager');
                                 })
                                     ->pluck('email', 'id');
                                 return $users->union($managers);
