@@ -47,14 +47,14 @@ class CreateTicket extends CreateRecord
             $created->save();
 
             $title = 'Initial Response on Case:' . ' Case ' . ' # ' . $created->ticket_identifier . ' - ' . $created->title;
-            Mail::to($created->customer)->queue(new TicketCreated(EmailType::CUSTOMER, $title));
+            Mail::to($created->customer)->send(new TicketCreated(EmailType::CUSTOMER, $title));
             foreach (User::whereHas('roles', function ($query) {
                 $query->where('name', 'super_admin')->orWhere('name', 'manager');
             })->get() as $recipient) {
-                Mail::to($recipient)->queue(new TicketCreated(EmailType::ADMIN, $title));
+                Mail::to($recipient)->send(new TicketCreated(EmailType::ADMIN, $title));
             }
             foreach (User::where('department_id', $created->department_id)->where('level_id', 2)->get() as $recipient) {
-                Mail::to($recipient)->queue(new TicketCreated(EmailType::TECHNICAL_SUPPORT, $title));
+                Mail::to($recipient)->send(new TicketCreated(EmailType::TECHNICAL_SUPPORT, $title));
             }
 
             return $created;
