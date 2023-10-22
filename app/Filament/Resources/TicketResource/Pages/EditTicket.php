@@ -87,7 +87,7 @@ class EditTicket extends EditRecord
                         $record->save();
                         $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
                         foreach (User::whereHas('roles', function ($query) {
-                            $query->where('name', 'super_admin')->orWhere('name', 'manager');
+                            $query->where('name', 'manager');
                         })->get() as $recipient) {
                             Mail::to($recipient)->send(new TicketEscalation(EmailType::ADMIN, $title));
                         }
