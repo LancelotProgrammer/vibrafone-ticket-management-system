@@ -1,4 +1,3 @@
-DROP DATABASE vtms_db;
 CREATE DATABASE IF NOT EXISTS vtms_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 USE vtms_db;
 CREATE TABLE IF NOT EXISTS countries (
