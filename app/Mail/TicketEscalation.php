@@ -39,7 +39,7 @@ class TicketEscalation extends Mailable
         return new Content(
             markdown: 'emails.ticket.escalation',
             with: [
-                'body' => 'This case has been escalated',
+                'body' => 'This case has been escalated.',
             ],
         );
     }

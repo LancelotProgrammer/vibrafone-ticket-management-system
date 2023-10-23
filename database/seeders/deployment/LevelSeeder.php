@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\deployment;
 
 use App\Models\Level;
 use Illuminate\Database\Seeder;

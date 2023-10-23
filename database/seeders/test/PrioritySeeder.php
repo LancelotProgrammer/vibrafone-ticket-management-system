@@ -1,6 +1,6 @@
 <?php
 
-namespace Database\Seeders;
+namespace Database\Seeders\test;
 
 use App\Models\Priority;
 use Illuminate\Database\Seeder;
