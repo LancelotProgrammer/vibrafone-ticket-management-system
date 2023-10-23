@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\TicketResource\Pages;
 
-use App\Enums\EmailType;
 use App\Enums\TicketHandler;
 use App\Enums\TicketStatus;
 use App\Filament\Resources\TicketResource;
@@ -46,16 +45,11 @@ class CreateTicket extends CreateRecord
             $created->ticketHistory()->save($ticketHistory);
             $created->save();
 
-            $title = 'Initial Response on Case:' . ' Case ' . ' # ' . $created->ticket_identifier . ' - ' . $created->title;
-            Mail::to($created->customer)->send(new TicketCreated(EmailType::CUSTOMER, $title));
-            foreach (User::whereHas('roles', function ($query) {
+            $managersEmails = User::whereHas('roles', function ($query) {
                 $query->where('name', 'manager');
-            })->get() as $recipient) {
-                Mail::to($recipient)->send(new TicketCreated(EmailType::ADMIN, $title));
-            }
-            foreach (User::where('department_id', $created->department_id)->where('level_id', 2)->get() as $recipient) {
-                Mail::to($recipient)->send(new TicketCreated(EmailType::TECHNICAL_SUPPORT, $title));
-            }
+            })->pluck('email')->toArray();
+            $title = 'Initial Response on Case:' . ' Case ' . ' # ' . $created->ticket_identifier . ' - ' . $created->title;
+            Mail::to($created->customer)->send(new TicketCreated($title, $managersEmails));
 
             return $created;
         });

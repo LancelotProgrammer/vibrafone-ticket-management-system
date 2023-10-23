@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use App\Enums\EmailType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -17,7 +16,6 @@ class TicketEscalation extends Mailable
      * Create a new message instance.
      */
     public function __construct(
-        private readonly EmailType $type,
         private readonly string $title,
     ) {
         //
@@ -28,21 +26,9 @@ class TicketEscalation extends Mailable
      */
     public function envelope(): Envelope
     {
-        if ($this->type == EmailType::ADMIN) {
-            return new Envelope(
-                subject: $this->title,
-            );
-        }
-        if ($this->type == EmailType::CUSTOMER) {
-            return new Envelope(
-                subject: $this->title,
-            );
-        }
-        if ($this->type == EmailType::HIGH_TECHNICAL_SUPPORT) {
-            return new Envelope(
-                subject: $this->title,
-            );
-        }
+        return new Envelope(
+            subject: $this->title,
+        );
     }
 
     /**
@@ -50,30 +36,12 @@ class TicketEscalation extends Mailable
      */
     public function content(): Content
     {
-        if ($this->type == EmailType::ADMIN) {
-            return new Content(
-                markdown: 'emails.ticket.escalation',
-                with: [
-                    'body' => 'Ticket escalation ADMIN',
-                ],
-            );
-        }
-        if ($this->type == EmailType::CUSTOMER) {
-            return new Content(
-                markdown: 'emails.ticket.escalation',
-                with: [
-                    'body' => 'Ticket escalation CUSTOMER',
-                ],
-            );
-        }
-        if ($this->type == EmailType::HIGH_TECHNICAL_SUPPORT) {
-            return new Content(
-                markdown: 'emails.ticket.escalation',
-                with: [
-                    'body' => 'Ticket escalation HIGH_TECHNICAL_SUPPORT',
-                ],
-            );
-        }
+        return new Content(
+            markdown: 'emails.ticket.escalation',
+            with: [
+                'body' => 'This case has been escalated',
+            ],
+        );
     }
 
     /**

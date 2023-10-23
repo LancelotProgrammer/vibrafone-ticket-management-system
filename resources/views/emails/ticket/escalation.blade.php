@@ -2,5 +2,4 @@
 
 {{ $body }}
 
-{{ config('app.name') }}
 </x-mail::message>

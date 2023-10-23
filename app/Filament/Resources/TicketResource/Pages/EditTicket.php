@@ -2,7 +2,6 @@
 
 namespace App\Filament\Resources\TicketResource\Pages;
 
-use App\Enums\EmailType;
 use App\Enums\TicketHandler;
 use App\Enums\TicketStatus;
 use App\Enums\TicketSubWorkOrder;
@@ -85,10 +84,13 @@ class EditTicket extends EditRecord
                         foreach (User::whereHas('roles', function ($query) {
                             $query->where('name', 'manager');
                         })->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation(EmailType::ADMIN, $title));
+                            Mail::to($recipient)->send(new TicketEscalation($title));
+                        }
+                        foreach (User::where('department_id', $this->record->department_id)->where('level_id', 2)->get() as $recipient) {
+                            Mail::to($recipient)->send(new TicketEscalation($title));
                         }
                         foreach (User::where('department_id', $this->record->department_id)->where('level_id', 3)->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation(EmailType::HIGH_TECHNICAL_SUPPORT, $title));
+                            Mail::to($recipient)->send(new TicketEscalation($title));
                         }
                         $this->refreshFormData([
                             'high_technical_support_user_id',
@@ -381,8 +383,8 @@ class EditTicket extends EditRecord
                 ->schema([
                     FileUpload::make('attachments')
                         ->getUploadedFileNameForStorageUsing(
-                            fn (TemporaryUploadedFile $file, $get): string => (string) str($file->getClientOriginalName())
-                                ->prepend(Str::random(10)  . '-' . $get('work_order') . '-'),
+                            fn (TemporaryUploadedFile $file, $get, $record): string => (string) str($file->getClientOriginalName())
+                                ->prepend(now()->toDateString() . '-' . $get('work_order') . '-'),
                         )
                         ->multiple()
                         ->columnSpanFull(),
@@ -496,7 +498,6 @@ class EditTicket extends EditRecord
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
                             TextInput::make('from')
-                                ->live()
                                 ->email()
                                 ->disabled(true)
                                 ->dehydrated(true)
@@ -504,14 +505,12 @@ class EditTicket extends EditRecord
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
                             TextInput::make('cc')
-                                ->live()
                                 ->email()
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
                             TextInput::make('to')
                                 ->email()
-                                ->live()
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),

@@ -2,7 +2,6 @@
 
 namespace App\Mail;
 
-use App\Enums\EmailType;
 use Illuminate\Bus\Queueable;
 use Illuminate\Mail\Mailable;
 use Illuminate\Mail\Mailables\Content;
@@ -17,8 +16,8 @@ class TicketCreated extends Mailable
      * Create a new message instance.
      */
     public function __construct(
-        private readonly EmailType $type,
         private readonly string $title,
+        private readonly array $managersEmails,
     ) {
         //
     }
@@ -28,21 +27,10 @@ class TicketCreated extends Mailable
      */
     public function envelope(): Envelope
     {
-        if ($this->type == EmailType::ADMIN) {
-            return new Envelope(
-                subject: $this->title,
-            );
-        }
-        if ($this->type == EmailType::CUSTOMER) {
-            return new Envelope(
-                subject: $this->title,
-            );
-        }
-        if ($this->type == EmailType::TECHNICAL_SUPPORT) {
-            return new Envelope(
-                subject: $this->title,
-            );
-        }
+        return new Envelope(
+            subject: $this->title,
+            cc: $this->managersEmails
+        );
     }
 
     /**
@@ -50,30 +38,20 @@ class TicketCreated extends Mailable
      */
     public function content(): Content
     {
-        if ($this->type == EmailType::ADMIN) {
-            return new Content(
-                markdown: 'emails.ticket.created',
-                with: [
-                    'body' => 'ticket created ADMIN',
-                ],
-            );
-        }
-        if ($this->type == EmailType::CUSTOMER) {
-            return new Content(
-                markdown: 'emails.ticket.created',
-                with: [
-                    'body' => 'ticket created CUSTOMER',
-                ],
-            );
-        }
-        if ($this->type == EmailType::TECHNICAL_SUPPORT) {
-            return new Content(
-                markdown: 'emails.ticket.created',
-                with: [
-                    'body' => 'ticket created TECHNICAL_SUPPORT',
-                ],
-            );
-        }
+        return new Content(
+            markdown: 'emails.ticket.created',
+            with: [
+                'body' => '
+Dears,
+
+Kindly note that your case is received and we will work on it.
+
+Thank you,
+
+Vibrafone Technical Support
+                ',
+            ],
+        );
     }
 
     /**

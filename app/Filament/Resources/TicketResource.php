@@ -399,6 +399,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->options(Type::all()->pluck('title', 'id'))
                                 ->live(),
                             Forms\Components\Select::make('priority_id')
+                                ->required()
+                                ->label('Priority')
                                 ->options(function ($get) {
                                     return Priority::where('type_id', $get('type_id'))->pluck('title', 'id');
                                 }),
