@@ -2,6 +2,8 @@
 
 namespace App\Filament\Resources\TicketResource\RelationManagers;
 
+use App\Enums\TicketWorkOrder;
+use App\Models\Level;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -34,10 +36,26 @@ class TicketHistoryRelationManager extends RelationManager
     {
         return $table
             ->modifyQueryUsing(function (Builder $query) {
-                if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                $record = $this->getOwnerRecord();
+                if (auth()->user()->hasRole(['customer'])) {
+                    $query->where('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
+                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)
+                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)
+                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
+                        ->orderByDesc('created_at', 'des');
+                }
+                if (auth()->user()->hasRole(['high_level_support']) && $record->level_id == Level::where('code', 2)->first()->id) {
+                    $query->where('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
+                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
+                        ->orderByDesc('created_at', 'des');
+                }
+                if ($record->level_id == Level::where('code', 2)->first()->id) {
                     $query->orderByDesc('created_at', 'des');
                 } else {
-                    $query->where('owner', auth()->user()->email)->orderByDesc('created_at', 'des');
+                    $query->orderByDesc('created_at', 'des');
                 }
             })
             ->recordTitleAttribute('title')
