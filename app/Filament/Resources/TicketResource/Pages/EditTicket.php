@@ -28,7 +28,6 @@ use Filament\Support\Enums\ActionSize;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class EditTicket extends EditRecord
@@ -104,7 +103,7 @@ class EditTicket extends EditRecord
 
             //NOTE: manage assign_ticket
             Actions\Action::make('assign_ticket')
-                ->hidden(!(auth()->user()->can('assign_ticket')))
+                ->hidden(!(auth()->user()->can('assign_support_ticket')))
                 ->visible(function (Ticket $record) {
                     if (!is_null($record->deleted_at)) {
                         return false;
@@ -369,9 +368,7 @@ class EditTicket extends EditRecord
         $users = User::where('department_id', $record->department_id)
             ->where('level_id', '=', $level)
             ->pluck('email', 'id');
-        $managers = User::orWhereHas('roles', function ($query) {
-            $query->where('name', 'manager');
-        })
+        $managers = User::permission('can_be_assigned_to_ticket')
             ->pluck('email', 'id');
         return $users->union($managers);
     }
@@ -529,7 +526,37 @@ class EditTicket extends EditRecord
 
     private static function getTicketOrderType($record): array
     {
-        if (auth()->user()->hasRole(['customer'])) {
+        if (auth()->user()->can('view_all_create_order_type_ticket')) {
+            if ($record->level_id == Level::where('code', 2)->first()->id) {
+                return [
+                    'Technical Support' => [
+                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
+                    ],
+                    'Customer' => [
+                        TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                        TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                    ],
+                ];
+            } else {
+                return [
+                    'Customer' => [
+                        TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                        TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                    ],
+                ];
+            }
+            return [];
+        }
+        if (auth()->user()->can('view_customer_create_order_type_ticket')) {
             return [
                 'Customer' => [
                     TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
@@ -538,7 +565,7 @@ class EditTicket extends EditRecord
                 ],
             ];
         }
-        if (auth()->user()->hasRole(['high_level_support']) && $record->level_id == Level::where('code', 2)->first()->id) {
+        if ($record->level_id == Level::where('code', 2)->first()->id && auth()->user()->can('view_support_create_order_type_ticket')) {
             return [
                 'Technical Support' => [
                     TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
@@ -546,33 +573,7 @@ class EditTicket extends EditRecord
                 ],
             ];
         }
-        if ($record->level_id == Level::where('code', 2)->first()->id) {
-            return [
-                'Technical Support' => [
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
-                ],
-                'Customer' => [
-                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
-                ],
-            ];
-        } else {
-            return [
-                'Customer' => [
-                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
-                ],
-            ];
-        }
+        return [];
     }
 
     private static function createOrderType($data, $record): void

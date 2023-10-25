@@ -3,7 +3,6 @@
 namespace App\Filament\Resources\TicketResource\RelationManagers;
 
 use App\Enums\TicketWorkOrder;
-use App\Models\Level;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Resources\RelationManagers\RelationManager;
@@ -13,7 +12,6 @@ use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 
 class TicketHistoryRelationManager extends RelationManager
 {
@@ -37,7 +35,10 @@ class TicketHistoryRelationManager extends RelationManager
         return $table
             ->modifyQueryUsing(function (Builder $query) {
                 $record = $this->getOwnerRecord();
-                if (auth()->user()->hasRole(['customer'])) {
+                if (auth()->user()->can('view_history_all_order_type_ticket')) {
+                    $query->orderByDesc('created_at', 'des');
+                }
+                if (auth()->user()->can('view_history_customer_order_type_ticket')) {
                     $query->where('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
                         ->orWhere('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)
                         ->orWhere('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value)
@@ -45,17 +46,12 @@ class TicketHistoryRelationManager extends RelationManager
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
                         ->orderByDesc('created_at', 'des');
                 }
-                if (auth()->user()->hasRole(['high_level_support']) && $record->level_id == Level::where('code', 2)->first()->id) {
+                if (auth()->user()->can('view_history_support_order_type_ticket')) {
                     $query->where('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
                         ->orderByDesc('created_at', 'des');
-                }
-                if ($record->level_id == Level::where('code', 2)->first()->id) {
-                    $query->orderByDesc('created_at', 'des');
-                } else {
-                    $query->orderByDesc('created_at', 'des');
                 }
             })
             ->recordTitleAttribute('title')

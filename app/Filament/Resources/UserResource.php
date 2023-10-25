@@ -5,14 +5,12 @@ namespace App\Filament\Resources;
 use App\Filament\Resources\UserResource\Pages;
 use App\Filament\Resources\UserResource\Pages\CreateUser;
 use App\Filament\Resources\UserResource\Pages\EditUser;
-use App\Filament\Resources\UserResource\RelationManagers;
 use App\Models\Country;
 use App\Models\Department;
 use App\Models\Level;
 use App\Models\User;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Exception;
-use Filament\Facades\Filament;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -20,8 +18,6 @@ use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\SoftDeletingScope;
 use Illuminate\Support\Facades\Hash;
 
 class UserResource extends Resource implements HasShieldPermissions
@@ -43,6 +39,7 @@ class UserResource extends Resource implements HasShieldPermissions
             'delete_any',
             'block',
             'unblock',
+            'can_not_be_blocked'
         ];
     }
 
@@ -150,7 +147,7 @@ class UserResource extends Resource implements HasShieldPermissions
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
                     ->visible(function (User $record) {
-                        if ($record->hasRole(['manager', 'super_admin'])) {
+                        if ($record->hasPermissionTo('can_not_be_blocked_user')) {
                             return false;
                         }
                         return $record->blocked_at === null;
@@ -185,7 +182,7 @@ class UserResource extends Resource implements HasShieldPermissions
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
                     ->visible(function (User $record) {
-                        if ($record->hasRole(['manager', 'super_admin'])) {
+                        if ($record->hasPermissionTo('can_not_be_blocked_user')) {
                             return false;
                         }
                         return $record->blocked_at !== null;

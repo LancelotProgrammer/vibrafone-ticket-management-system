@@ -54,22 +54,52 @@ class TicketResource extends Resource implements HasShieldPermissions
             'delete',
             'delete_any',
 
-            'filter_table',
+            'export',
 
             'view_all',
-            'export',
+            'view_all',
+            'filter_table',
+            'filter_table',
+            'filter_table',
+            'view_all',
             'edit_all',
-
-            'manage_user',
-
-            'esclate',
-            'assign',
-            'create_work_order_type',
             'archive',
-
+            'can_not_be_assigned_to',
+            'edit_all',
+            'view_all_department',
+            'edit_all',
+            'edit_all',
+            'edit_all',
+            'edit_all',
             'view_status',
             'view_handler',
+            'view_user',
+            'view_status',
+            'view_handler',
+            'view_user',
+            'view_all_order_type',
+            'view_customer_order_type',
+            'view_support_order_type',
+            'view_all_order_type',
+            'view_customer_order_type',
+            'view_support_order_type',
 
+            'can_be_assigned_to',
+
+            'esclate',
+            'assign_support',
+            'create_work_order_type',
+            'manage_user',
+            'manage_user',
+            'manage_user',
+            'manage_user',
+            'view_all_create_order_type',
+            'view_customer_create_order_type',
+            'view_support_create_order_type',
+
+            'view_history_all_order_type',
+            'view_history_customer_order_type',
+            'view_history_support_order_type',
             'edit_history_date',
             'view_history',
         ];
@@ -203,7 +233,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\ViewAction::make()
                     ->visible(function ($record) {
-                        if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                        if (auth()->user()->can('view_all_ticket')) {
                             return true;
                         }
                         if (
@@ -221,14 +251,14 @@ class TicketResource extends Resource implements HasShieldPermissions
                         if ($record->status == TicketStatus::CLOSED->value) {
                             return false;
                         }
+                        if (auth()->user()->can('edit_all_ticket')) {
+                            return true;
+                        }
                         if (
                             $record->technicalSupport->contains(auth()->user()->id) ||
                             $record->highTechnicalSupport->contains(auth()->user()->id) ||
                             $record->customer->contains(auth()->user()->id)
                         ) {
-                            return true;
-                        }
-                        if (auth()->user()->hasRole(['manager', 'super_admin'])) {
                             return true;
                         }
                     }),
@@ -275,7 +305,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         if ($record->status == TicketStatus::CLOSED->value) {
                             return false;
                         }
-                        if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                        if (auth()->user()->can('can_not_be_assigned_to_ticket')) {
                             return false;
                         }
                         if (
@@ -422,7 +452,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     );
                                 })
                                 ->options(function () {
-                                    if (auth()->user()->hasRole(['manager', 'super_admin'])) {
+                                    if (auth()->user()->can('view_all_department_ticket')) {
                                         return Department::all()->where('title', '!=', 'default')->pluck('title', 'id');
                                     } else {
                                         return Department::all()->where('title', '!=', 'default')->where('id', auth()->user()->department_id)->pluck('title', 'id');
@@ -541,13 +571,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     return Self::getTicketSubOrderType($record);
                                 }),
                             Forms\Components\Select::make('status')
-                                ->hidden(!(auth()->user()->can(['view_status_ticket'])))
+                                ->hidden(!(auth()->user()->can('view_status_ticket')))
                                 ->dehydrated(true)
                                 ->options(
                                     Self::getTicketStatus()
                                 ),
                             Forms\Components\Select::make('handler')
-                                ->hidden(!(auth()->user()->can(['view_handler_ticket'])))
+                                ->hidden(!(auth()->user()->can('view_handler_ticket')))
                                 ->dehydrated(true)
                                 ->options(
                                     Self::getTicketHandler()
@@ -556,7 +586,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->columnSpan(4)
                         ->columns(4),
                     Forms\Components\Section::make('Ticket Users')
-                        ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                        ->hidden(!(auth()->user()->can('view_user_ticket')))
                         ->schema([
                             Forms\Components\Select::make('customer')
                                 ->multiple()
@@ -651,12 +681,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     return Self::getTicketSubOrderType($record);
                                 }),
                             Forms\Components\Select::make('status')
-                                ->hidden(!(auth()->user()->can(['view_status_ticket'])))
+                                ->hidden(!(auth()->user()->can('view_status_ticket')))
                                 ->options(
                                     Self::getTicketStatus()
                                 ),
                             Forms\Components\Select::make('handler')
-                                ->hidden(!(auth()->user()->can(['view_handler_ticket'])))
+                                ->hidden(!(auth()->user()->can('view_handler_ticket')))
                                 ->options(
                                     Self::getTicketHandler()
                                 ),
@@ -664,7 +694,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->columnSpan(4)
                         ->columns(4),
                     Forms\Components\Section::make('Ticket Users')
-                        ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                        ->hidden(!(auth()->user()->can('view_user_ticket')))
                         ->schema([
                             Forms\Components\Select::make('customer')
                                 ->multiple()
@@ -693,7 +723,31 @@ class TicketResource extends Resource implements HasShieldPermissions
 
     private static function getTicketOrderType($record): array
     {
-        if (auth()->user()->hasRole(['customer'])) {
+        if (auth()->user()->can('view_all_order_type_ticket')) {
+            if ($record->level_id == Level::where('code', 2)->first()->id) {
+                return [
+                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
+                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                ];
+            } else {
+                return [
+                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                ];
+            }
+            return [];
+        }
+        if (auth()->user()->can('view_customer_order_type_ticket')) {
             return [
                 TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
                 TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
@@ -702,7 +756,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
             ];
         }
-        if (auth()->user()->hasRole(['high_level_support']) && $record->level_id == Level::where('code', 2)->first()->id) {
+        if (auth()->user()->can('view_support_order_type_ticket')) {
             return [
                 TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
                 TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
@@ -710,61 +764,45 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
             ];
         }
-        if ($record->level_id == Level::where('code', 2)->first()->id) {
-            return [
-                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
-                TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
-                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
-                TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
-            ];
-        } else {
-            return [
-                TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
-            ];
-        }
+        return [];
     }
 
     private static function getTicketSubOrderType($record): array
     {
-        if (auth()->user()->hasRole(['customer'])) {
+        if (auth()->user()->can('view_all_order_type_ticket')) {
+            if ($record->level_id == Level::where('code', 2)->first()->id) {
+                return [
+                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
+                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
+                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
+                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
+                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
+                ];
+            } else {
+                return [
+                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
+                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
+                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+                ];
+            }
+            return [];
+        }
+        if (auth()->user()->can('view_customer_order_type_ticket')) {
             return [
                 TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
                 TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
                 TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
             ];
         }
-        if (auth()->user()->hasRole(['high_level_support']) && $record->level_id == Level::where('code', 2)->first()->id) {
+        if (auth()->user()->can('view_support_order_type_ticket')) {
             return [
                 TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
                 TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
                 TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
             ];
         }
-        if ($record->level_id == Level::where('code', 2)->first()->id) {
-            return [
-                TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
-                TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
-                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
-                TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
-                TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
-                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
-            ];
-        } else {
-            return [
-                TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
-                TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
-                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
-            ];
-        }
+        return [];
     }
 
     private static function getTicketStatus(): array
