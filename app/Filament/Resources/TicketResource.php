@@ -184,12 +184,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                         Tables\Columns\TextColumn::make('highTechnicalSupport.email')
                             ->icon('heroicon-m-user-plus'),
                     ]),
-                    Stack::make([
-                        Tables\Columns\TextColumn::make('status')
-                            ->icon('heroicon-m-wrench'),
-                        Tables\Columns\TextColumn::make('handler')
-                            ->icon('heroicon-m-tag'),
-                    ]),
                 ]),
             ])
             ->filters([
