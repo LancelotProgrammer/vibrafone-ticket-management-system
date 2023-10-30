@@ -407,8 +407,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->required()
                         ->maxLength(64),
                     Forms\Components\TextInput::make('company')
-                        ->disabled(true)
-                        ->dehydrated(true)
                         ->default(auth()->user()->company)
                         ->columnSpanFull(),
                     Forms\Components\Textarea::make('description')
@@ -462,12 +460,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                     Forms\Components\Section::make('Ticket Files')
                         ->schema([
                             Forms\Components\FileUpload::make('attachments')
-                                ->acceptedFileTypes([
-                                    'application/pdf',
-                                    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-                                    'image/jpeg',
-                                    'image/png',
-                                ])
                                 ->openable()
                                 ->columnSpanFull()
                                 ->multiple(),

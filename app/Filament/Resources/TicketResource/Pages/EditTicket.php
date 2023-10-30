@@ -38,8 +38,8 @@ class EditTicket extends EditRecord
     {
         return [
 
-            //NOTE: manage esclate_ticket
-            Actions\Action::make('esclate_ticket')
+            //NOTE: manage escalate_ticket
+            Actions\Action::make('escalate_ticket')
                 ->hidden(!(auth()->user()->can('esclate_ticket')))
                 ->visible(function (Ticket $record) {
                     if (!is_null($record->deleted_at)) {
@@ -69,7 +69,7 @@ class EditTicket extends EditRecord
                         $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
-                            'title' => 'Ticket has been esclated to: '  . User::where('id', $data['user_id'])->first()->email,
+                            'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
                             'owner' => auth()->user()->email,
                             'work_order' => $record->work_order,
                             'sub_work_order' => $record->sub_work_order,
@@ -96,7 +96,7 @@ class EditTicket extends EditRecord
                         ]);
                     });
                     Notification::make()
-                        ->title('Ticket has been esclated')
+                        ->title('Ticket has been escalated')
                         ->success()
                         ->send();
                 }),
@@ -394,7 +394,7 @@ class EditTicket extends EditRecord
                                 $set('body', null);
                                 $set('email_title', null);
                                 $set('email_body', null);
-                                $set('from', null);
+                                // $set('from', null);
                                 $set('cc', null);
                                 $set('to', null);
                             }
@@ -405,7 +405,7 @@ class EditTicket extends EditRecord
                                 $set('body', null);
                                 $set('email_title', null);
                                 $set('email_body', null);
-                                $set('from', null);
+                                // $set('from', null);
                                 $set('cc', null);
                                 $set('to', null);
                             } else {
@@ -413,8 +413,8 @@ class EditTicket extends EditRecord
                                 $set('body', null);
                                 $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                 $set('email_body', null);
-                                $set('from', auth()->user()->email);
-                                $set('cc', null);
+                                // $set('from', auth()->user()->email);
+                                $set('cc', auth()->user()->email);
                                 $set('to', null);
                             }
                         })
@@ -429,7 +429,7 @@ class EditTicket extends EditRecord
                                 $set('body', null);
                                 $set('email_title', null);
                                 $set('email_body', null);
-                                $set('from', null);
+                                // $set('from', null);
                                 $set('cc', null);
                                 $set('to', null);
                             } else {
@@ -437,8 +437,8 @@ class EditTicket extends EditRecord
                                 $set('body', null);
                                 $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                 $set('email_body', null);
-                                $set('from', auth()->user()->email);
-                                $set('cc', null);
+                                // $set('from', auth()->user()->email);
+                                $set('cc', auth()->user()->email);
                                 $set('to', null);
                             }
                         })
@@ -495,13 +495,16 @@ class EditTicket extends EditRecord
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
                             TextInput::make('from')
-                                ->email()
                                 ->disabled(true)
                                 ->dehydrated(true)
+                                ->default('noreply@vibrafone.co')
+                                ->email()
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
                             TextInput::make('cc')
+                                ->disabled(true)
+                                ->dehydrated(true)
                                 ->email()
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);

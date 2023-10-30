@@ -5,6 +5,7 @@ namespace App\Filament\Resources\TicketResource\RelationManagers;
 use App\Enums\TicketWorkOrder;
 use Filament\Forms;
 use Filament\Forms\Form;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
 use Filament\Tables\Actions\EditAction;
@@ -24,6 +25,7 @@ class TicketHistoryRelationManager extends RelationManager
                 Forms\Components\DateTimePicker::make('created_at')
                     ->columnSpanFull(),
                 Forms\Components\FileUpload::make('attachments')
+                    ->dehydrated(false)
                     ->openable()
                     ->disabled()
                     ->columnSpanFull(),
@@ -36,10 +38,11 @@ class TicketHistoryRelationManager extends RelationManager
             ->modifyQueryUsing(function (Builder $query) {
                 $record = $this->getOwnerRecord();
                 if (auth()->user()->can('view_history_all_order_type_ticket')) {
-                    $query->orderByDesc('created_at', 'des');
+                    return $query->where('ticket_id', $record->id)->orderByDesc('created_at', 'des');
                 }
                 if (auth()->user()->can('view_history_customer_order_type_ticket')) {
-                    $query->where('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
+                    return $query->where('ticket_id', $record->id)
+                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
                         ->orWhere('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)
                         ->orWhere('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value)
                         ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)
@@ -47,7 +50,8 @@ class TicketHistoryRelationManager extends RelationManager
                         ->orderByDesc('created_at', 'des');
                 }
                 if (auth()->user()->can('view_history_support_order_type_ticket')) {
-                    $query->where('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
+                    return $query->where('ticket_id', $record->id)
+                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
@@ -73,6 +77,14 @@ class TicketHistoryRelationManager extends RelationManager
             ])
             ->actions([
                 EditAction::make()
+                    ->action(function ($record, $data) {
+                        $record->created_at = $data['created_at'];
+                        $record->save();
+                        Notification::make()
+                            ->title('saved')
+                            ->success()
+                            ->send();
+                    })
                     ->hidden(!(auth()->user()->can('edit_history_date_ticket'))),
                 ViewAction::make()
                     ->label('View Attachments'),
