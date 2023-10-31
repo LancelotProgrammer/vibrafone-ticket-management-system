@@ -76,6 +76,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_user',
             'view_status',
             'view_handler',
+            'view_created_at',
             'view_user',
             'view_all_order_type',
             'view_customer_order_type',
@@ -183,6 +184,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->icon('heroicon-m-user-group'),
                         Tables\Columns\TextColumn::make('highTechnicalSupport.email')
                             ->icon('heroicon-m-user-plus'),
+                    ]),
+                    Stack::make([
+                        Tables\Columns\TextColumn::make('status')
+                            ->hidden(!(auth()->user()->can('view_status_ticket'))),
+                        Tables\Columns\TextColumn::make('created_at')
+                            ->hidden(!(auth()->user()->can('view_created_at_ticket'))),
                     ]),
                 ]),
             ])
@@ -529,7 +536,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->disabled(true)
                                 ->dehydrated(true)
                                 ->required()
-                                ->label('Category')
+                                ->label('Technology')
                                 ->options(Category::all()->pluck('title', 'id')),
                         ])
                         ->columnSpan(4)
@@ -642,7 +649,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->label('Department')
                                 ->options(Department::all()->pluck('title', 'id')),
                             Forms\Components\Select::make('category_id')
-                                ->label('Category')
+                                ->label('Technology')
                                 ->options(Category::all()->pluck('title', 'id')),
                         ])
                         ->columnSpan(4)
