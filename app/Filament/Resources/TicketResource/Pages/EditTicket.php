@@ -414,7 +414,7 @@ class EditTicket extends EditRecord
                                 $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                 $set('email_body', null);
                                 // $set('from', auth()->user()->email);
-                                $set('cc', auth()->user()->email);
+                                $set('cc', null);
                                 $set('to', null);
                             }
                         })
@@ -438,7 +438,7 @@ class EditTicket extends EditRecord
                                 $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
                                 $set('email_body', null);
                                 // $set('from', auth()->user()->email);
-                                $set('cc', auth()->user()->email);
+                                $set('cc', null);
                                 $set('to', null);
                             }
                         })
@@ -502,15 +502,13 @@ class EditTicket extends EditRecord
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
-                            TextInput::make('cc')
-                                ->disabled(true)
-                                ->dehydrated(true)
+                            TextInput::make('to')
                                 ->email()
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
-                            TextInput::make('to')
-                                ->email()
+                            TextInput::make('cc')
+                                ->prefix(auth()->user()->email . ',')
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
@@ -692,6 +690,7 @@ class EditTicket extends EditRecord
                 $record->sub_work_order = null;
             }
             if ($data['send_email']) {
+                $data['cc'] = $data['cc'] . ',' . auth()->user()->email;
                 Mail::to($data['to'])->send(new TicketWorkOrderMail($data, $data['attachments']));
             }
             $ticketHistory = new TicketHistory([
