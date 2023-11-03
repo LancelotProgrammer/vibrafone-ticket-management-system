@@ -129,12 +129,12 @@ class TicketResource extends Resource implements HasShieldPermissions
             ->modifyQueryUsing(function (Builder $query) {
                 // NOTE: here we filter the tickets based on user type / department / level
                 // filter for high support manager
-                if (auth()->user()->level_id == 3 && auth()->user()->can('view_all_ticket')) {
+                if (auth()->user()->level_id == 3 && auth()->user()->can('can_view_all_ticket')) {
                     return $query
                         ->where('level_id', auth()->user()->level_id);
                 }
                 // filter for manager / admin / dev
-                if (auth()->user()->can('view_all_ticket')) {
+                if (auth()->user()->can('can_view_all_ticket')) {
                     return $query;
                 }
                 // filter for high support
@@ -255,7 +255,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\ViewAction::make()
                     ->visible(function ($record) {
-                        if (auth()->user()->can('view_all_ticket')) {
+                        if (auth()->user()->can('can_view_all_ticket')) {
                             return true;
                         }
                         if (
@@ -273,7 +273,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         if ($record->status == TicketStatus::CLOSED->value) {
                             return false;
                         }
-                        if (auth()->user()->can('edit_all_ticket')) {
+                        if (auth()->user()->can('can_edit_all_ticket')) {
                             return true;
                         }
                         if (
@@ -410,7 +410,7 @@ class TicketResource extends Resource implements HasShieldPermissions
 
     public static function canEdit(Model $record): bool
     {
-        if (auth()->user()->can('edit_all_ticket')) {
+        if (auth()->user()->can('can_edit_all_ticket')) {
             return true;
         } else {
             return $record->department_id == auth()->user()->department_id;
@@ -511,17 +511,17 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->disabled(true)
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('title')
-                        ->disabled(!(auth()->user()->can('edit_all_ticket')))
+                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
                         ->dehydrated(true)
                         ->required()
                         ->maxLength(64),
                     Forms\Components\TextInput::make('ne_product')
-                        ->disabled(!(auth()->user()->can('edit_all_ticket')))
+                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
                         ->dehydrated(true)
                         ->required()
                         ->maxLength(64),
                     Forms\Components\TextInput::make('sw_version')
-                        ->disabled(!(auth()->user()->can('edit_all_ticket')))
+                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
                         ->dehydrated(true)
                         ->required()
                         ->maxLength(64),
@@ -530,7 +530,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->dehydrated(true)
                         ->columnSpanFull(),
                     Forms\Components\Textarea::make('description')
-                        ->disabled(!(auth()->user()->can('edit_all_ticket')))
+                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
                         ->dehydrated(true)
                         ->required()
                         ->columnSpanFull()
