@@ -42,7 +42,7 @@ class EditTicket extends EditRecord
 
             //NOTE: manage escalate_ticket
             Actions\Action::make('escalate_ticket')
-                ->hidden(!(auth()->user()->can('esclate_ticket')))
+                ->hidden(!(auth()->user()->can('escalate_ticket')))
                 ->visible(function (Ticket $record) {
                     if (!is_null($record->deleted_at)) {
                         return false;
@@ -136,7 +136,7 @@ class EditTicket extends EditRecord
 
             //NOTE: manage assign_ticket
             Actions\Action::make('assign_ticket')
-                ->hidden(!(auth()->user()->can('assign_support_ticket')))
+                ->hidden(!(auth()->user()->can('assign_technical_support_ticket')))
                 ->visible(function (Ticket $record) {
                     if (!is_null($record->deleted_at)) {
                         return false;
@@ -208,7 +208,7 @@ class EditTicket extends EditRecord
             //NOTE: manage user_ticket
             ActionGroup::make([
                 Actions\Action::make('add_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
+                    ->hidden(!(auth()->user()->can('add_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -256,7 +256,7 @@ class EditTicket extends EditRecord
                         }
                     }),
                 Actions\Action::make('remove_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
+                    ->hidden(!(auth()->user()->can('remove_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -298,7 +298,7 @@ class EditTicket extends EditRecord
                             ->send();
                     }),
                 Actions\Action::make('add_high_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
+                    ->hidden(!(auth()->user()->can('add_high_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -346,7 +346,7 @@ class EditTicket extends EditRecord
                         }
                     }),
                 Actions\Action::make('remove_high_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
+                    ->hidden(!(auth()->user()->can('remove_high_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -401,7 +401,7 @@ class EditTicket extends EditRecord
         $users = User::where('department_id', $record->department_id)
             ->where('level_id', '=', $level)
             ->pluck('email', 'id');
-        $managers = User::permission('can_be_assigned_as_support_ticket')
+        $managers = User::permission('can_be_assigned_as_technical_support_ticket')
             ->pluck('email', 'id');
         return $users->union($managers);
     }
@@ -600,7 +600,7 @@ class EditTicket extends EditRecord
                 ],
             ];
         }
-        if ($record->level_id == Level::where('code', 2)->first()->id && auth()->user()->can('view_support_create_order_type_ticket')) {
+        if ($record->level_id == Level::where('code', 2)->first()->id && auth()->user()->can('view_high_technical_support_create_order_type_ticket')) {
             return [
                 'Technical Support' => [
                     TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',

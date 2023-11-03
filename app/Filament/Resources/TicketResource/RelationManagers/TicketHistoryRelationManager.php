@@ -49,7 +49,7 @@ class TicketHistoryRelationManager extends RelationManager
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
                         ->orderByDesc('created_at', 'des');
                 }
-                if (auth()->user()->can('view_history_support_order_type_ticket')) {
+                if (auth()->user()->can('view_history_high_technical_support_order_type_ticket')) {
                     return $query->where('ticket_id', $record->id)
                         ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
@@ -60,14 +60,14 @@ class TicketHistoryRelationManager extends RelationManager
             })
             ->recordTitleAttribute('title')
             ->columns([
-                Tables\Columns\TextColumn::make('title')->limit(50),
-                Tables\Columns\TextColumn::make('body')->limit(50),
-                Tables\Columns\TextColumn::make('work_order'),
-                Tables\Columns\TextColumn::make('sub_work_order'),
-                Tables\Columns\TextColumn::make('status'),
-                Tables\Columns\TextColumn::make('handler'),
-                Tables\Columns\TextColumn::make('owner'),
-                Tables\Columns\TextColumn::make('created_at'),
+                Tables\Columns\TextColumn::make('title')->toggleable(),
+                Tables\Columns\TextColumn::make('body')->toggleable(),
+                Tables\Columns\TextColumn::make('work_order')->toggleable(),
+                Tables\Columns\TextColumn::make('sub_work_order')->toggleable(),
+                Tables\Columns\TextColumn::make('status')->toggleable(),
+                Tables\Columns\TextColumn::make('handler')->toggleable(),
+                Tables\Columns\TextColumn::make('owner')->toggleable(),
+                Tables\Columns\TextColumn::make('created_at')->toggleable(),
             ])
             ->filters([
                 //
