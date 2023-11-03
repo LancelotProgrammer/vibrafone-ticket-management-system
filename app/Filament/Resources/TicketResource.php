@@ -176,11 +176,14 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ]),
                     Stack::make([
                         Tables\Columns\TextColumn::make('customer.email')
-                            ->icon('heroicon-m-user-circle'),
+                            ->icon('heroicon-m-user-circle')
+                            ->hidden(!(auth()->user()->can('view_customers'))),
                         Tables\Columns\TextColumn::make('technicalSupport.email')
-                            ->icon('heroicon-m-user-group'),
+                            ->icon('heroicon-m-user-group')
+                            ->hidden(!(auth()->user()->can('view_technical_supports'))),
                         Tables\Columns\TextColumn::make('highTechnicalSupport.email')
-                            ->icon('heroicon-m-user-plus'),
+                            ->icon('heroicon-m-user-plus')
+                            ->hidden(!(auth()->user()->can('view_high_technical_supports'))),
                     ]),
                     Stack::make([
                         Tables\Columns\TextColumn::make('status')
