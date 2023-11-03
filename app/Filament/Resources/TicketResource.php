@@ -58,13 +58,18 @@ class TicketResource extends Resource implements HasShieldPermissions
 
             'view_all',
             'view_all',
+            'view_status',
+            'view_created_at',
+            'view_start_at',
+            'view_end_at',
+            'view_archived_at',
             'filter_table',
             'filter_table',
             'filter_table',
             'view_all',
             'edit_all',
             'archive',
-            'can_not_be_assigned_to',
+            'can_not_self_assign',
             'edit_all',
             'view_all_department',
             'edit_all',
@@ -73,27 +78,26 @@ class TicketResource extends Resource implements HasShieldPermissions
             'edit_all',
             'view_status',
             'view_handler',
-            'view_user',
+            'view_users',
             'view_status',
             'view_handler',
-            'view_created_at',
-            'view_user',
+            'view_users',
             'view_all_order_type',
             'view_customer_order_type',
             'view_support_order_type',
             'view_all_order_type',
             'view_customer_order_type',
             'view_support_order_type',
-
-            'can_be_assigned_to',
 
             'esclate',
             'assign_support',
             'create_work_order_type',
-            'manage_user',
-            'manage_user',
-            'manage_user',
-            'manage_user',
+            'manage_users',
+            'manage_users',
+            'manage_users',
+            'manage_users',
+            'can_be_assigned_as_support',
+            'send_email_in_order_type',
             'view_all_create_order_type',
             'view_customer_create_order_type',
             'view_support_create_order_type',
@@ -187,9 +191,30 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ]),
                     Stack::make([
                         Tables\Columns\TextColumn::make('status')
+                            ->formatStateUsing(function ($state) {
+                                return 'Current Status: ' . $state;
+                            })
                             ->hidden(!(auth()->user()->can('view_status_ticket'))),
                         Tables\Columns\TextColumn::make('created_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Created-at: ' . $state;
+                            })
                             ->hidden(!(auth()->user()->can('view_created_at_ticket'))),
+                        Tables\Columns\TextColumn::make('start_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Started-at: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
+                        Tables\Columns\TextColumn::make('end_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Ended-at: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
+                        Tables\Columns\TextColumn::make('deleted_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Archived-at: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_archived_at_ticket'))),
                     ]),
                 ]),
             ])
@@ -274,7 +299,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             $record->deleted_at = now();
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'ticket has been archived',
+                                'title' => 'Ticket has been archived',
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -290,7 +315,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->success()
                             ->send();
                     }),
-                Tables\Actions\Action::make('assgin')
+                Tables\Actions\Action::make('assign')
                     ->modalHeading('Confirm password to continue')
                     ->requiresConfirmation()
                     ->form([
@@ -306,7 +331,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         if ($record->status == TicketStatus::CLOSED->value) {
                             return false;
                         }
-                        if (auth()->user()->can('can_not_be_assigned_to_ticket')) {
+                        if (auth()->user()->can('can_not_self_assign_ticket')) {
                             return false;
                         }
                         if (
@@ -348,12 +373,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 $record->save();
                             });
                             Notification::make()
-                                ->title('ticket assgined to you')
+                                ->title('ticket assigned to you')
                                 ->success()
                                 ->send();
                         } catch (Exception $e) {
                             Notification::make()
-                                ->title('Error assging ticket')
+                                ->title('Error assigning ticket')
                                 ->body($e->getMessage())
                                 ->danger()
                                 ->send();
@@ -579,7 +604,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->columnSpan(4)
                         ->columns(4),
                     Forms\Components\Section::make('Ticket Users')
-                        ->hidden(!(auth()->user()->can('view_user_ticket')))
+                        ->hidden(!(auth()->user()->can('view_users_ticket')))
                         ->schema([
                             Forms\Components\Select::make('customer')
                                 ->multiple()
@@ -602,10 +627,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                     Forms\Components\Section::make('Ticket Proccess Time')
                         ->schema([
                             Forms\Components\DateTimePicker::make('start_at')
+                                ->hidden(!(auth()->user()->can('view_start_at_ticket')))
                                 ->live()
                                 ->disabled(true)
                                 ->dehydrated(true),
                             Forms\Components\DateTimePicker::make('end_at')
+                                ->hidden(!(auth()->user()->can('view_end_at_ticket')))
                                 ->live()
                                 ->disabled(true)
                                 ->dehydrated(true),
@@ -626,7 +653,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     return !is_null($record->deleted_at);
                 })
                 ->columnSpan(3)
-                ->label('Archive At'),
+                ->label('Archived At'),
             Forms\Components\Section::make('Ticket Info')
                 ->schema([
                     Forms\Components\TextInput::make('ticket_identifier'),
@@ -657,6 +684,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     Forms\Components\Section::make('Ticket Files')
                         ->schema([
                             Forms\Components\FileUpload::make('attachments')
+                                ->multiple()
                                 ->downloadable()
                                 ->columnSpanFull()
                                 ->openable(),
@@ -687,7 +715,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->columnSpan(4)
                         ->columns(4),
                     Forms\Components\Section::make('Ticket Users')
-                        ->hidden(!(auth()->user()->can('view_user_ticket')))
+                        ->hidden(!(auth()->user()->can('view_users_ticket')))
                         ->schema([
                             Forms\Components\Select::make('customer')
                                 ->multiple()
@@ -703,8 +731,10 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->columns(3),
                     Forms\Components\Section::make('Ticket Proccess Time')
                         ->schema([
-                            Forms\Components\DateTimePicker::make('start_at'),
-                            Forms\Components\DateTimePicker::make('end_at'),
+                            Forms\Components\DateTimePicker::make('start_at')
+                                ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
+                            Forms\Components\DateTimePicker::make('end_at')
+                                ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
                         ])
                         ->columnSpan(4)
                         ->columns(2),

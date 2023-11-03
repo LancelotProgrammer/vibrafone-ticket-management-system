@@ -6,6 +6,7 @@ use App\Enums\TicketHandler;
 use App\Enums\TicketStatus;
 use App\Enums\TicketSubWorkOrder;
 use App\Enums\TicketWorkOrder;
+use App\Exceptions\ControlPanelDomainException;
 use App\Filament\Resources\TicketResource;
 use App\Mail\TicketEscalation;
 use App\Mail\TicketWorkOrder as TicketWorkOrderMail;
@@ -26,6 +27,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\EditRecord;
 use Filament\Support\Enums\ActionSize;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
 use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
@@ -62,43 +64,74 @@ class EditTicket extends EditRecord
                         ->required(),
                 ])
                 ->action(function (array $data, Ticket $record): void {
-                    DB::transaction(function () use ($data, $record) {
-                        $record->highTechnicalSupport()->attach($data['user_id']);
-                        $record->level_id = Level::where('code', 2)->first()->id;
-                        $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                        $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                        $ticketHistory = new TicketHistory([
-                            'ticket_id' => $record->id,
-                            'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
-                            'owner' => auth()->user()->email,
-                            'work_order' => $record->work_order,
-                            'sub_work_order' => $record->sub_work_order,
-                            'status' => $record->status,
-                            'handler' => $record->handler,
-                            'created_at' => now(),
-                        ]);
-                        $record->ticketHistory()->save($ticketHistory);
-                        $record->save();
-                        $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
-                        foreach (User::whereHas('roles', function ($query) {
-                            $query->where('name', 'manager');
-                        })->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation($title));
+                    try {
+                        DB::transaction(function () use ($data, $record) {
+
+                            $record->highTechnicalSupport()->attach($data['user_id']);
+                            $record->level_id = Level::where('code', 2)->first()->id;
+                            $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
+                            $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
+
+                            $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
+
+                            $emails = [];
+                            $managers = User::whereHas('roles', function ($query) {
+                                $query->where('name', 'manager');
+                            })->pluck('email')->toArray();
+                            $emails = array_merge($emails, $managers);
+                            $support = User::where('department_id', $this->record->department_id)->where('level_id', 2)->pluck('email')->toArray();
+                            $emails = array_merge($emails, $support);
+                            $highSupport = User::where('department_id', $this->record->department_id)->where('level_id', 3)->pluck('email')->toArray();
+                            $emails = array_merge($emails, $highSupport);
+
+                            $highSupportManager = User::whereHas('roles', function ($query) {
+                                $query->where('name', 'high_support_manager');
+                            })->first();
+
+                            if (is_null($highSupportManager)) {
+                                throw new ControlPanelDomainException('There is no high support manager');
+                            }
+
+                            Mail::to($highSupportManager->email)->send(new TicketEscalation($title, $emails));
+
+                            $this->refreshFormData([
+                                'high_technical_support_user_id',
+                            ]);
+                        });
+                        Notification::make()
+                            ->title('Ticket has been escalated')
+                            ->success()
+                            ->send();
+                    } catch (ControlPanelDomainException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->warning()
+                            ->send();
+                    } catch (Exception $e) {
+                        if (App::environment('local')) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Something went wrong')
+                                ->danger()
+                                ->send();
                         }
-                        foreach (User::where('department_id', $this->record->department_id)->where('level_id', 2)->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation($title));
-                        }
-                        foreach (User::where('department_id', $this->record->department_id)->where('level_id', 3)->get() as $recipient) {
-                            Mail::to($recipient)->send(new TicketEscalation($title));
-                        }
-                        $this->refreshFormData([
-                            'high_technical_support_user_id',
-                        ]);
-                    });
-                    Notification::make()
-                        ->title('Ticket has been escalated')
-                        ->success()
-                        ->send();
+                    }
                 }),
 
             //NOTE: manage assign_ticket
@@ -175,7 +208,7 @@ class EditTicket extends EditRecord
             //NOTE: manage user_ticket
             ActionGroup::make([
                 Actions\Action::make('add_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -223,7 +256,7 @@ class EditTicket extends EditRecord
                         }
                     }),
                 Actions\Action::make('remove_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -265,7 +298,7 @@ class EditTicket extends EditRecord
                             ->send();
                     }),
                 Actions\Action::make('add_high_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -313,7 +346,7 @@ class EditTicket extends EditRecord
                         }
                     }),
                 Actions\Action::make('remove_high_technical_support')
-                    ->hidden(!(auth()->user()->can('manage_user_ticket')))
+                    ->hidden(!(auth()->user()->can('manage_users_ticket')))
                     ->visible(function (Ticket $record) {
                         if (!is_null($record->deleted_at)) {
                             return false;
@@ -368,7 +401,7 @@ class EditTicket extends EditRecord
         $users = User::where('department_id', $record->department_id)
             ->where('level_id', '=', $level)
             ->pluck('email', 'id');
-        $managers = User::permission('can_be_assigned_to_ticket')
+        $managers = User::permission('can_be_assigned_as_support_ticket')
             ->pluck('email', 'id');
         return $users->union($managers);
     }
@@ -475,6 +508,7 @@ class EditTicket extends EditRecord
                                 ->required()
                                 ->maxLength(255),
                             Checkbox::make('send_email')
+                                ->hidden(!(auth()->user()->can('send_email_in_order_type_ticket')))
                                 ->live(),
                         ])
                         ->columnSpan(1)

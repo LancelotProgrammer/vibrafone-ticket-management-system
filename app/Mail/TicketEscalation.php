@@ -17,6 +17,7 @@ class TicketEscalation extends Mailable
      */
     public function __construct(
         private readonly string $title,
+        private readonly array $emails,
     ) {
         //
     }
@@ -28,6 +29,7 @@ class TicketEscalation extends Mailable
     {
         return new Envelope(
             subject: $this->title,
+            cc: $this->emails
         );
     }
 

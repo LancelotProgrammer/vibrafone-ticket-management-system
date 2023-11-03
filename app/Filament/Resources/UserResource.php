@@ -67,9 +67,7 @@ class UserResource extends Resource implements HasShieldPermissions
                             ->disabled(fn (Page $livewire) => $livewire instanceof EditUser)
                             ->dehydrated(true)
                             ->maxLength(128),
-                        Forms\Components\TextInput::make('company')
-                            ->required()
-                            ->maxLength(128),
+
                         Forms\Components\TextInput::make('password')
                             ->type('password')
                             ->maxLength(255)
@@ -85,23 +83,23 @@ class UserResource extends Resource implements HasShieldPermissions
                             })
                             ->label(fn (Page $livewire) => $livewire instanceof CreateUser ? 'Password' : 'New Password'),
                     ])
-                    ->columns(4),
+                    ->columns(3),
                 Forms\Components\Section::make()
                     ->schema([
-                        Forms\Components\DatePicker::make('email_verified_at')
-                            ->dehydrated(false)
-                            ->disabled(),
-                        Forms\Components\DatePicker::make('blocked_at')
-                            ->dehydrated(false)
-                            ->disabled(),
-                    ])
-                    ->columns(2),
-                Forms\Components\Section::make()
-                    ->schema([
+                        Forms\Components\TextInput::make('company')
+                            ->required()
+                            ->maxLength(128),
                         Forms\Components\Select::make('country_id')
                             ->required()
                             ->label('Country')
                             ->options(Country::all()->pluck('country_name', 'id')),
+                    ])
+                    ->columns(2),
+                Forms\Components\Section::make()
+                    ->schema([
+                        Forms\Components\DatePicker::make('blocked_at')
+                            ->dehydrated(false)
+                            ->disabled(),
                         Forms\Components\Select::make('department_id')
                             ->required()
                             ->label('Department')
