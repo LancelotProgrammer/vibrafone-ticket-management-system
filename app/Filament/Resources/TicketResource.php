@@ -31,10 +31,14 @@ use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Filters\Filter;
 use Filament\Tables\Filters\SelectFilter;
+use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
+use pxlrbt\FilamentExcel\Columns\Column;
+use pxlrbt\FilamentExcel\Exports\ExcelExport;
 
 class TicketResource extends Resource implements HasShieldPermissions
 {
@@ -72,7 +76,6 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_all_order_type',
             'view_customer_order_type',
             'view_high_technical_support_order_type',
-
 
             'can_filter_table',
             'can_not_self_assign',
@@ -128,28 +131,38 @@ class TicketResource extends Resource implements HasShieldPermissions
             ->poll('10s')
             ->modifyQueryUsing(function (Builder $query) {
                 // NOTE: here we filter the tickets based on user type / department / level
+                // NOTE: ->whereNull('deleted_at') is added to the users that does not have filter permission
                 // filter for high support manager
                 if (auth()->user()->level_id == 3 && auth()->user()->can('can_view_all_ticket')) {
                     return $query
-                        ->where('level_id', auth()->user()->level_id);
+                        ->where('level_id', auth()->user()->level_id)
+                        ->whereNull('deleted_at')
+                        ->orderByDesc('id', 'des');
                 }
                 // filter for manager / admin / dev
                 if (auth()->user()->can('can_view_all_ticket')) {
-                    return $query;
+                    return $query
+                        ->orderByDesc('id', 'des');
                 }
                 // filter for high support
                 if (auth()->user()->level_id == 3) {
                     return $query
                         ->where('department_id', auth()->user()->department_id)
-                        ->where('level_id', auth()->user()->level_id);
+                        ->where('level_id', auth()->user()->level_id)
+                        ->whereNull('deleted_at')
+                        ->orderByDesc('id', 'des');
                 }
                 // filter for support / customer
                 if (auth()->user()->level_id == 2 || auth()->user()->level_id == 1) {
                     return $query
-                        ->where('department_id', auth()->user()->department_id);
+                        ->where('department_id', auth()->user()->department_id)
+                        ->whereNull('deleted_at')
+                        ->orderByDesc('id', 'des');
                 }
                 return $query
-                    ->where('department_id', auth()->user()->department_id);
+                    ->where('department_id', auth()->user()->department_id)
+                    ->whereNull('deleted_at')
+                    ->orderByDesc('id', 'des');
             })
             ->columns([
                 Split::make([
@@ -215,6 +228,18 @@ class TicketResource extends Resource implements HasShieldPermissions
                 ]),
             ])
             ->filters([
+                TernaryFilter::make('deleted_at')
+                    ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
+                    ->label('Is Archived')
+                    ->placeholder('Is Archived')
+                    ->trueLabel('Yes')
+                    ->falseLabel('No')
+                    ->default(false)
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('deleted_at'),
+                        false: fn (Builder $query) => $query->whereNull('deleted_at'),
+                        blank: fn (Builder $query) => $query,
+                    ),
                 SelectFilter::make('handler')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
                     ->options([
@@ -260,8 +285,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                         }
                         if (
                             $record->technicalSupport->contains(auth()->user()->id) ||
-                            $record->highTechnicalSupport->contains(auth()->user()->id ||
-                                $record->customer->contains(auth()->user()->id))
+                            $record->highTechnicalSupport->contains(auth()->user()->id) ||
+                            $record->customer->contains(auth()->user()->id)
                         ) {
                             return true;
                         } else {
@@ -384,7 +409,34 @@ class TicketResource extends Resource implements HasShieldPermissions
                     }),
             ])
             ->bulkActions([
-                //
+                ExportBulkAction::make()
+                    ->hidden(!(auth()->user()->can('export_ticket')))
+                    ->exports([
+                        ExcelExport::make()
+                            ->withColumns([
+                                Column::make('ticket_identifier'),
+                                Column::make('type')
+                                    ->formatStateUsing(function ($record) {
+                                        return Type::where('id', $record->type_id)->first()->title;
+                                    }),
+                                Column::make('department')
+                                    ->formatStateUsing(function ($record) {
+                                        return Department::where('id', $record->department_id)->first()->title;
+                                    }),
+                                Column::make('priority')
+                                    ->formatStateUsing(function ($record) {
+                                        return Priority::where('id', $record->priority_id)->first()->title;
+                                    }),
+                                Column::make('category')
+                                    ->formatStateUsing(function ($record) {
+                                        return Category::where('id', $record->category_id)->first()->title;
+                                    }),
+                                Column::make('esclated')
+                                    ->getStateUsing(function ($record) {
+                                        return 'test';
+                                    }),
+                            ]),
+                    ]),
             ])
             ->emptyStateActions([
                 Tables\Actions\CreateAction::make(),
@@ -406,15 +458,6 @@ class TicketResource extends Resource implements HasShieldPermissions
             'edit' => Pages\EditTicket::route('/{record}/edit'),
             'view' => Pages\ViewTicket::route('/{record}'),
         ];
-    }
-
-    public static function canEdit(Model $record): bool
-    {
-        if (auth()->user()->can('can_edit_all_ticket')) {
-            return true;
-        } else {
-            return $record->department_id == auth()->user()->department_id;
-        }
     }
 
     private static function getCreateForm(): array
@@ -511,26 +554,46 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->disabled(true)
                         ->dehydrated(true),
                     Forms\Components\TextInput::make('title')
-                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
+                        ->disabled(
+                            function ($record) {
+                                return self::getEditAllCondition($record);
+                            }
+                        )
                         ->dehydrated(true)
                         ->required()
                         ->maxLength(64),
                     Forms\Components\TextInput::make('ne_product')
-                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
+                        ->disabled(
+                            function ($record) {
+                                return self::getEditAllCondition($record);
+                            }
+                        )
                         ->dehydrated(true)
                         ->required()
                         ->maxLength(64),
                     Forms\Components\TextInput::make('sw_version')
-                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
+                        ->disabled(
+                            function ($record) {
+                                return self::getEditAllCondition($record);
+                            }
+                        )
                         ->dehydrated(true)
                         ->required()
                         ->maxLength(64),
                     Forms\Components\TextInput::make('company')
-                        ->disabled(true)
+                        ->disabled(
+                            function ($record) {
+                                return self::getEditAllCondition($record);
+                            }
+                        )
                         ->dehydrated(true)
                         ->columnSpanFull(),
                     Forms\Components\Textarea::make('description')
-                        ->disabled(!(auth()->user()->can('can_edit_all_ticket')))
+                        ->disabled(
+                            function ($record) {
+                                return self::getEditAllCondition($record);
+                            }
+                        )
                         ->dehydrated(true)
                         ->required()
                         ->columnSpanFull()
@@ -744,6 +807,15 @@ class TicketResource extends Resource implements HasShieldPermissions
                 ->columnSpan(3)
                 ->columns(4),
         ];
+    }
+
+    private static function getEditAllCondition($record): bool
+    {
+        if (auth()->user()->can('can_edit_all_ticket')) {
+            return false;
+        } else {
+            return !($record->customer->contains(auth()->user()->id));
+        }
     }
 
     private static function getTicketOrderType($record): array

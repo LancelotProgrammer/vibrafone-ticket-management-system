@@ -59,7 +59,7 @@ class EditTicket extends EditRecord
                     Select::make('user_id')
                         ->label('High Technical Support User')
                         ->options(function ($record) {
-                            return Self::getTechnicalSupportUsers($record, 3);
+                            return Self::getHighTechnicalSupportUsers($record);
                         })
                         ->required(),
                 ])
@@ -147,7 +147,7 @@ class EditTicket extends EditRecord
                     Select::make('user_id')
                         ->label('Technical Support User')
                         ->options(function ($record) {
-                            return Self::getTechnicalSupportUsers($record, 2);
+                            return Self::getTechnicalSupportUsers($record);
                         })
                         ->required(),
                 ])
@@ -223,7 +223,7 @@ class EditTicket extends EditRecord
                         Select::make('user_id')
                             ->label('Technical Support User')
                             ->options(function ($record) {
-                                return Self::getTechnicalSupportUsers($record, 2);
+                                return Self::getTechnicalSupportUsers($record);
                             })
                             ->required(),
                     ])
@@ -313,7 +313,7 @@ class EditTicket extends EditRecord
                         Select::make('user_id')
                             ->label('High Technical Support User')
                             ->options(function ($record) {
-                                return Self::getTechnicalSupportUsers($record, 3);
+                                return Self::getHighTechnicalSupportUsers($record);
                             })
                             ->required(),
                     ])
@@ -396,10 +396,20 @@ class EditTicket extends EditRecord
         ];
     }
 
-    private static function getTechnicalSupportUsers($record, $level): Collection
+    private static function getTechnicalSupportUsers($record): Collection
     {
         $users = User::where('department_id', $record->department_id)
-            ->where('level_id', '=', $level)
+            ->where('level_id', '=', 2)
+            ->pluck('email', 'id');
+        $managers = User::permission('can_be_assigned_as_technical_support_ticket')
+            ->pluck('email', 'id');
+        return $users->union($managers);
+    }
+
+    private static function getHighTechnicalSupportUsers($record): Collection
+    {
+        $users = User::where('department_id', $record->department_id)
+            ->where('level_id', '=', 3)
             ->pluck('email', 'id');
         $managers = User::permission('can_be_assigned_as_technical_support_ticket')
             ->pluck('email', 'id');
