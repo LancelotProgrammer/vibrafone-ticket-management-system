@@ -60,6 +60,7 @@ class TicketResource extends Resource implements HasShieldPermissions
 
             'can_view_all',
             'can_edit_all',
+            'can_access_all',
             'can_archive',
 
             'export',
@@ -298,7 +299,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         if ($record->status == TicketStatus::CLOSED->value) {
                             return false;
                         }
-                        if (auth()->user()->can('can_edit_all_ticket')) {
+                        if (auth()->user()->can('can_access_all_ticket')) {
                             return true;
                         }
                         if (
