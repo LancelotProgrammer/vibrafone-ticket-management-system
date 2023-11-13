@@ -19,6 +19,7 @@ use Filament\Resources\Resource;
 use Filament\Tables;
 use Filament\Tables\Table;
 use Illuminate\Support\Facades\Hash;
+use STS\FilamentImpersonate\Tables\Actions\Impersonate;
 
 class UserResource extends Resource implements HasShieldPermissions
 {
@@ -39,7 +40,8 @@ class UserResource extends Resource implements HasShieldPermissions
             'delete_any',
             'block',
             'unblock',
-            'can_not_be_blocked'
+            'can_not_be_blocked',
+            'impersonate'
         ];
     }
 
@@ -129,6 +131,8 @@ class UserResource extends Resource implements HasShieldPermissions
                 //
             ])
             ->actions([
+                Impersonate::make()
+                    ->hidden(!(auth()->user()->can('impersonate_user'))),
                 Tables\Actions\ViewAction::make(),
                 Tables\Actions\EditAction::make(),
                 Tables\Actions\Action::make('block')
