@@ -423,90 +423,100 @@ class EditTicket extends EditRecord
                 ->schema([
                     FileUpload::make('attachments')
                         ->getUploadedFileNameForStorageUsing(
-                            fn (TemporaryUploadedFile $file, $get, $record): string => (string) str($file->getClientOriginalName())
+                            fn (TemporaryUploadedFile $file, $get): string => (string) str($file->getClientOriginalName())
                                 ->prepend(now()->toDateString() . '-' . $get('work_order') . '-'),
                         )
                         ->multiple()
                         ->columnSpanFull(),
-                    Select::make('work_order')
-                        ->required()
-                        ->live()
-                        ->afterStateUpdated(function ($record, $state, $set) {
-                            if (is_null($state)) {
-                                $set('title', null);
-                                $set('body', null);
-                                $set('email_title', null);
-                                $set('email_body', null);
-                                // $set('from', null);
-                                $set('cc', null);
-                                $set('to', null);
-                            }
-                            if (
-                                $state == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value || $state == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value
-                            ) {
-                                $set('title', null);
-                                $set('body', null);
-                                $set('email_title', null);
-                                $set('email_body', null);
-                                // $set('from', null);
-                                $set('cc', null);
-                                $set('to', null);
-                            } else {
-                                $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
-                                $set('body', null);
-                                $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
-                                $set('email_body', null);
-                                // $set('from', auth()->user()->email);
-                                $set('cc', null);
-                                $set('to', null);
-                            }
-                        })
-                        ->options(function ($record) {
-                            return Self::getTicketOrderType($record);
-                        }),
-                    Select::make('sub_work_order')
-                        ->live()
-                        ->afterStateUpdated(function ($record, $state, $set) {
-                            if (is_null($state)) {
-                                $set('title', null);
-                                $set('body', null);
-                                $set('email_title', null);
-                                $set('email_body', null);
-                                // $set('from', null);
-                                $set('cc', null);
-                                $set('to', null);
-                            } else {
-                                $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
-                                $set('body', null);
-                                $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
-                                $set('email_body', null);
-                                // $set('from', auth()->user()->email);
-                                $set('cc', null);
-                                $set('to', null);
-                            }
-                        })
-                        ->required(function ($get) {
-                            return match ($get('work_order')) {
-                                TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => true,
-                                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => true,
-                                default => [],
-                            };
-                        })
-                        ->options(function ($get) {
-                            return match ($get('work_order')) {
-                                TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => [
-                                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
-                                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
-                                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
-                                ],
-                                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => [
-                                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
-                                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
-                                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
-                                ],
-                                default => [],
-                            };
-                        }),
+                    Section::make('Choose Work Order Type')
+                        ->schema([
+                            Select::make('work_order')
+                                ->required()
+                                ->live()
+                                ->afterStateUpdated(function ($record, $state, $set) {
+                                    if (is_null($state)) {
+                                        $set('title', null);
+                                        $set('body', null);
+                                        $set('email_title', null);
+                                        $set('email_body', null);
+                                        // $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
+                                    }
+                                    if (
+                                        $state == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value || $state == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value
+                                    ) {
+                                        $set('title', null);
+                                        $set('body', null);
+                                        $set('email_title', null);
+                                        $set('email_body', null);
+                                        // $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
+                                    } else {
+                                        $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
+                                        $set('body', null);
+                                        $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
+                                        $set('email_body', null);
+                                        // $set('from', auth()->user()->email);
+                                        $set('cc', null);
+                                        $set('to', null);
+                                    }
+                                })
+                                ->options(function ($record) {
+                                    return Self::getTicketOrderType($record);
+                                }),
+                            Select::make('sub_work_order')
+                                ->live()
+                                ->afterStateUpdated(function ($record, $state, $set) {
+                                    if (is_null($state)) {
+                                        $set('title', null);
+                                        $set('body', null);
+                                        $set('email_title', null);
+                                        $set('email_body', null);
+                                        // $set('from', null);
+                                        $set('cc', null);
+                                        $set('to', null);
+                                    } else {
+                                        $set('title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
+                                        $set('body', null);
+                                        $set('email_title', $state . ' - ' . ' case ' . ' # ' . $record->ticket_identifier . ' - ' . $record->title);
+                                        $set('email_body', null);
+                                        // $set('from', auth()->user()->email);
+                                        $set('cc', null);
+                                        $set('to', null);
+                                    }
+                                })
+                                ->required(function ($get) {
+                                    return match ($get('work_order')) {
+                                        TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => true,
+                                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => true,
+                                        default => false,
+                                    };
+                                })
+                                ->visible(function ($get) {
+                                    return match ($get('work_order')) {
+                                        TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => true,
+                                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => true,
+                                        default => false,
+                                    };
+                                })
+                                ->options(function ($get) {
+                                    return match ($get('work_order')) {
+                                        TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => [
+                                            TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
+                                            TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
+                                            TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+                                        ],
+                                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => [
+                                            TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
+                                            TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
+                                            TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
+                                        ],
+                                        default => [],
+                                    };
+                                }),
+                        ]),
                     Section::make('Work Order Type Info')
                         ->schema([
                             TextInput::make('title')
@@ -733,9 +743,11 @@ class EditTicket extends EditRecord
                 $record->work_order = $data['work_order'];
                 $record->sub_work_order = null;
             }
-            if ($data['send_email']) {
-                $data['cc'] = $data['cc'] . ',' . auth()->user()->email;
-                Mail::to($data['to'])->send(new TicketWorkOrderMail($data, $data['attachments']));
+            if (isset($data['send_email'])) {
+                if ($data['send_email']) {
+                    $data['cc'] = $data['cc'] . ',' . auth()->user()->email;
+                    Mail::to($data['to'])->send(new TicketWorkOrderMail($data, $data['attachments']));
+                }
             }
             $ticketHistory = new TicketHistory([
                 'ticket_id' => $record->id,
