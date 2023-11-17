@@ -281,14 +281,14 @@ class TicketResource extends Resource implements HasShieldPermissions
                 Tables\Actions\DeleteAction::make(),
                 Tables\Actions\ViewAction::make()
                     ->visible(function ($record) {
-                        if (auth()->user()->can('can_view_all_ticket')) {
-                            return true;
-                        }
                         if (
                             $record->technicalSupport->contains(auth()->user()->id) ||
                             $record->highTechnicalSupport->contains(auth()->user()->id) ||
                             $record->customer->contains(auth()->user()->id)
                         ) {
+                            return true;
+                        }
+                        if (auth()->user()->can('can_view_all_ticket')) {
                             return true;
                         } else {
                             return false;
@@ -299,14 +299,14 @@ class TicketResource extends Resource implements HasShieldPermissions
                         if ($record->status == TicketStatus::CLOSED->value) {
                             return false;
                         }
-                        if (auth()->user()->can('can_access_all_ticket')) {
-                            return true;
-                        }
                         if (
                             $record->technicalSupport->contains(auth()->user()->id) ||
                             $record->highTechnicalSupport->contains(auth()->user()->id) ||
                             $record->customer->contains(auth()->user()->id)
                         ) {
+                            return true;
+                        }
+                        if (auth()->user()->can('can_access_all_ticket')) {
                             return true;
                         } else {
                             return false;
