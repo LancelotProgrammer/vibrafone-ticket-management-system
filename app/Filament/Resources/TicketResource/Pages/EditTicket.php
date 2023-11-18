@@ -635,6 +635,7 @@ class EditTicket extends EditRecord
     {
         DB::transaction(function () use ($data, $record) {
             $redirectFlag = false;
+
             if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
                 if ($data['sub_work_order'] == TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value) {
                     $record->status = TicketStatus::CUSTOMER_PENDING->value;
@@ -755,7 +756,7 @@ class EditTicket extends EditRecord
                 'body' => $data['body'] ?? null,
                 'owner' => auth()->user()->email,
                 'work_order' => $data['work_order'],
-                'sub_work_order' => $data['sub_work_order'],
+                'sub_work_order' => $data['sub_work_order'] ?? null,
                 'attachments' => $data['attachments'],
                 'status' => $status,
                 'handler' => $handler,
