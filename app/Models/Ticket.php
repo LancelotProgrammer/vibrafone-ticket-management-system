@@ -29,6 +29,7 @@ class Ticket extends Model
         'handler',
         'start_at',
         'end_at',
+        'cancel_at',
     ];
 
     protected $casts = [

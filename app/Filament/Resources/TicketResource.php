@@ -51,19 +51,26 @@ class TicketResource extends Resource implements HasShieldPermissions
     public static function getPermissionPrefixes(): array
     {
         return [
-            'view',
+
+            // NOTE: all permissions below needs the {view_any} permission to be enabled
+
+            'view', // NOTE: enables users to view the ticket details | alternative name: view details
             'view_any',
             'create',
-            'update',
+            'update', // NOTE: enables users to interact with a ticket | alternative name: access
             'delete',
-            'delete_any',
 
-            'can_view_all',
-            'can_edit_all',
-            'can_access_all',
+            'can_view_all', // NOTE: this permission make the user ignores {can_ignore_level_when_view / can_ignore_department_when_view}
+            'can_ignore_level_when_view',
+            'can_ignore_department_when_view',
+
+            'can_edit_any_info', // NOTE: enables users to edit the unlocked fields of any ticket at any condition | depends on the view permission filter
+            'can_view_any_details', // NOTE: enables users to view ticket details at any condition | depends on the view permission filter
+            'can_access_all', // NOTE: enables users to interact with any ticket only if it is enabled | depends on the view permission filter
+
             'can_archive',
-
-            'export',
+            'can_export_excel',
+            'can_export_pdf',
 
             'view_handler',
             'view_status',
@@ -74,30 +81,39 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_customers',
             'view_technical_supports',
             'view_high_technical_supports',
-            'view_all_order_type',
+            'view_all_order_type', // NOTE: this permission make the user ignores {view_customer_order_type / view_high_technical_support_order_type}
             'view_customer_order_type',
             'view_high_technical_support_order_type',
 
             'can_filter_table',
-            'can_not_self_assign',
-            'can_select_any_department',
+            'can_not_self_assign', // NOTE: this permission is only for users who are not managers
+            'can_select_any_department', // NOTE: this permission needs the {create} permission to be enabled
 
-            'add_technical_support',
-            'remove_technical_support',
-            'add_high_technical_support',
-            'remove_high_technical_support',
-            'escalate',
-            'assign_technical_support',
+            // NOTE: all permissions below needs the {update} permission to be enabled
+
+            'add_technical_support', // NOTE: this permission is only managers
+            'remove_technical_support', // NOTE: this permission is only managers
+            'add_high_technical_support', // NOTE: this permission is only managers
+            'remove_high_technical_support', // NOTE: this permission is only managers
+
+            'can_escalate',
+            'can_cancel',
+            'can_activate',
+            'can_assign_technical_support',
             'can_be_assigned_as_technical_support',
+            'can_be_assigned_as_high_technical_support',
+
             'create_work_order_type',
-            'view_all_create_order_type',
+            // NOTE: all permissions below needs the {create_work_order_type} permission to be enabled
+            'view_all_create_order_type',// this permission make the user ignores {view_customer_create_order_type / view_high_technical_support_create_order_type}
             'view_customer_create_order_type',
             'view_high_technical_support_create_order_type',
             'send_email_in_order_type',
 
             'view_history',
+            // NOTE: all permissions below needs the {view_history} permission to be enabled
             'edit_history_date',
-            'view_history_all_order_type',
+            'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_high_technical_support_order_type}
             'view_history_customer_order_type',
             'view_history_high_technical_support_order_type',
         ];
@@ -106,23 +122,17 @@ class TicketResource extends Resource implements HasShieldPermissions
     public static function form(Form $form): Form
     {
         return $form
-            ->schema([
-                Forms\Components\Section::make('Create Info')
-                    ->visible(function (Page $livewire) {
-                        return $livewire instanceof CreateTicket;
-                    })
-                    ->schema(Self::getCreateForm()),
-                Forms\Components\Section::make('Edit Info')
-                    ->visible(function (Page $livewire) {
-                        return $livewire instanceof EditTicket;
-                    })
-                    ->schema(Self::getEditForm()),
-                Forms\Components\Section::make('View Info')
-                    ->visible(function (Page $livewire) {
-                        return $livewire instanceof ViewTicket;
-                    })
-                    ->schema(Self::getViewForm()),
-            ])
+            ->schema(function (Page $livewire) {
+                if ($livewire instanceof CreateTicket) {
+                    return Self::getCreateForm();
+                }
+                if ($livewire instanceof EditTicket) {
+                    return Self::getEditForm();
+                }
+                if ($livewire instanceof ViewTicket) {
+                    return Self::getViewForm();
+                }
+            })
             ->columns(3);
     }
 
@@ -131,37 +141,45 @@ class TicketResource extends Resource implements HasShieldPermissions
         return $table
             ->poll('10s')
             ->modifyQueryUsing(function (Builder $query) {
-                // NOTE: here we filter the tickets based on user type / department / level
-                // NOTE: ->whereNull('deleted_at') is added to the users that does not have filter permission
-                // filter for high support manager
-                if (auth()->user()->level_id == 3 && auth()->user()->can('can_view_all_ticket')) {
-                    return $query
-                        ->where('level_id', auth()->user()->level_id)
-                        ->whereNull('deleted_at')
-                        ->orderByDesc('id', 'des');
-                }
-                // filter for manager / admin / dev
+                // NOTE: this is for admins
                 if (auth()->user()->can('can_view_all_ticket')) {
                     return $query
                         ->orderByDesc('id', 'des');
                 }
-                // filter for high support
-                if (auth()->user()->level_id == 3) {
-                    return $query
-                        ->where('department_id', auth()->user()->department_id)
-                        ->where('level_id', auth()->user()->level_id)
-                        ->whereNull('deleted_at')
-                        ->orderByDesc('id', 'des');
+                if (auth()->user()->level_id == 1 || auth()->user()->level_id == 2 || auth()->user()->level_id == 3) {
+                    if (auth()->user()->can('can_ignore_level_when_view_ticket')) {
+                        if (auth()->user()->can('can_ignore_department_when_view_ticket')) {
+                            // NOTE: this is for managers
+                            return $query
+                                ->whereNull('deleted_at')
+                                ->orderByDesc('id', 'des');
+                        } else {
+                            // NOTE: this is for customers
+                            return $query
+                                ->where('department_id', auth()->user()->department_id)
+                                ->whereNull('deleted_at')
+                                ->orderByDesc('id', 'des');
+                        }
+                    } else {
+                        // NOTE: this is for support l1 / support l1 manager / support l2 / support l2 manager / etc..
+                        if (auth()->user()->can('can_ignore_department_when_view_ticket')) {
+                            return $query
+                                ->where('level_id', auth()->user()->level_id)
+                                ->whereNull('deleted_at')
+                                ->orderByDesc('id', 'des');
+                        } else {
+                            return $query
+                                ->where('department_id', auth()->user()->department_id)
+                                ->where('level_id', auth()->user()->level_id)
+                                ->whereNull('deleted_at')
+                                ->orderByDesc('id', 'des');
+                        }
+                    }
                 }
-                // filter for support / customer
-                if (auth()->user()->level_id == 2 || auth()->user()->level_id == 1) {
-                    return $query
-                        ->where('department_id', auth()->user()->department_id)
-                        ->whereNull('deleted_at')
-                        ->orderByDesc('id', 'des');
-                }
+                // NOTE: this is the default query
                 return $query
                     ->where('department_id', auth()->user()->department_id)
+                    ->where('level_id', auth()->user()->level_id)
                     ->whereNull('deleted_at')
                     ->orderByDesc('id', 'des');
             })
@@ -173,20 +191,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                         Tables\Columns\TextColumn::make('title')
                             ->limit(25)
                             ->icon('heroicon-m-bars-3-bottom-left'),
-                    ]),
-                    Split::make([
-                        Stack::make([
-                            Tables\Columns\TextColumn::make('department.title')
-                                ->icon('heroicon-m-building-office'),
-                            Tables\Columns\TextColumn::make('priority.title')
-                                ->icon('heroicon-m-exclamation-circle'),
-                        ]),
-                        Stack::make([
-                            Tables\Columns\TextColumn::make('type.title')
-                                ->icon('heroicon-m-hashtag'),
-                            Tables\Columns\TextColumn::make('category.title')
-                                ->icon('heroicon-m-cog-8-tooth'),
-                        ]),
                     ]),
                     Stack::make([
                         Tables\Columns\TextColumn::make('customer.email')
@@ -200,31 +204,60 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->hidden(!(auth()->user()->can('view_high_technical_supports_ticket'))),
                     ]),
                     Stack::make([
+                        Tables\Columns\TextColumn::make('created_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Created At: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_created_at_ticket'))),
+                        Tables\Columns\TextColumn::make('start_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Started At: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
+                        Tables\Columns\TextColumn::make('end_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Ended At: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
+                        Tables\Columns\TextColumn::make('deleted_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Archived At: ' . $state;
+                            })
+                            ->hidden(!(auth()->user()->can('view_archived_at_ticket')))
+                            ->badge()
+                            ->color('primary'),
+                        Tables\Columns\TextColumn::make('canceled_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Canceled At: ' . $state;
+                            })
+                            ->badge()
+                            ->color('danger'),
+                    ]),
+                    Split::make([
+                        Stack::make([
+                            Tables\Columns\TextColumn::make('department.title')
+                                ->icon('heroicon-m-building-office'),
+                            Tables\Columns\TextColumn::make('category.title')
+                                ->icon('heroicon-m-cog-8-tooth'),
+                        ]),
+                        Stack::make([
+                            Tables\Columns\TextColumn::make('priority.title')
+                                ->icon('heroicon-m-exclamation-circle'),
+                            Tables\Columns\TextColumn::make('type.title')
+                                ->icon('heroicon-m-hashtag'),
+                        ]),
+                    ]),
+                    Stack::make([
                         Tables\Columns\TextColumn::make('status')
                             ->formatStateUsing(function ($state) {
                                 return 'Current Status: ' . $state;
                             })
                             ->hidden(!(auth()->user()->can('view_status_ticket'))),
-                        Tables\Columns\TextColumn::make('created_at')
+                        Tables\Columns\TextColumn::make('handler')
                             ->formatStateUsing(function ($state) {
-                                return 'Created-at: ' . $state;
+                                return 'Current Handler: ' . $state;
                             })
-                            ->hidden(!(auth()->user()->can('view_created_at_ticket'))),
-                        Tables\Columns\TextColumn::make('start_at')
-                            ->formatStateUsing(function ($state) {
-                                return 'Started-at: ' . $state;
-                            })
-                            ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
-                        Tables\Columns\TextColumn::make('end_at')
-                            ->formatStateUsing(function ($state) {
-                                return 'Ended-at: ' . $state;
-                            })
-                            ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
-                        Tables\Columns\TextColumn::make('deleted_at')
-                            ->formatStateUsing(function ($state) {
-                                return 'Archived-at: ' . $state;
-                            })
-                            ->hidden(!(auth()->user()->can('view_archived_at_ticket'))),
+                            ->hidden(!(auth()->user()->can('view_handler_ticket'))),
                     ]),
                 ]),
             ])
@@ -241,12 +274,23 @@ class TicketResource extends Resource implements HasShieldPermissions
                         false: fn (Builder $query) => $query->whereNull('deleted_at'),
                         blank: fn (Builder $query) => $query,
                     ),
+                TernaryFilter::make('canceled_at')
+                    ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
+                    ->label('Is Canceled')
+                    ->placeholder('Is Canceled')
+                    ->trueLabel('Yes')
+                    ->falseLabel('No')
+                    ->queries(
+                        true: fn (Builder $query) => $query->whereNotNull('canceled_at'),
+                        false: fn (Builder $query) => $query->whereNull('canceled_at'),
+                        blank: fn (Builder $query) => $query,
+                    ),
                 SelectFilter::make('handler')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
                     ->options([
                         TicketHandler::CUSTOMER->value => 'Customer',
                         TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
-                        TicketHandler::HIGH_LEVEL_SUPPORT->value => 'High level support',
+                        TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'High Technical support',
                     ]),
                 SelectFilter::make('status')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
@@ -255,9 +299,16 @@ class TicketResource extends Resource implements HasShieldPermissions
                         TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
                         TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
                         TicketStatus::CLOSED->value => 'Closed',
-                        TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value => 'Hight Level Support Pending',
+                        TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'High Technical Support Pending',
                         TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'Technical Support Pending',
                         TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
+                    ]),
+                SelectFilter::make('level_id')
+                    ->label('Level')
+                    ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
+                    ->options([
+                        2 => 'level 1',
+                        3 => 'level 2',
                     ]),
                 Filter::make('created_at')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
@@ -277,112 +328,41 @@ class TicketResource extends Resource implements HasShieldPermissions
                             );
                     })
             ])
+            ->filtersFormColumns(3)
             ->actions([
-                Tables\Actions\DeleteAction::make(),
-                Tables\Actions\ViewAction::make()
-                    ->visible(function ($record) {
-                        if (
-                            $record->technicalSupport->contains(auth()->user()->id) ||
-                            $record->highTechnicalSupport->contains(auth()->user()->id) ||
-                            $record->customer->contains(auth()->user()->id)
-                        ) {
-                            return true;
-                        }
-                        if (auth()->user()->can('can_view_all_ticket')) {
-                            return true;
-                        } else {
+                Tables\Actions\ActionGroup::make([
+
+                    // NOTE: default actions
+                    Tables\Actions\DeleteAction::make(),
+                    Tables\Actions\EditAction::make()
+                        ->label('Access'),
+                    Tables\Actions\ViewAction::make()
+                        ->label('View Details'),
+
+                    // NOTE: activate_ticket action
+                    Tables\Actions\Action::make('activate_ticket')
+                        ->icon('heroicon-m-check-badge')
+                        ->color('success')
+                        ->hidden(!(auth()->user()->can('can_activate_ticket')))
+                        ->visible(function (Ticket $record) {
+                            if ($record->status == TicketStatus::CLOSED->value) {
+                                return false;
+                            }
+                            if (!is_null($record->deleted_at)) {
+                                return false;
+                            }
+                            if (!is_null($record->canceled_at)) {
+                                return true;
+                            }
                             return false;
-                        }
-                    }),
-                Tables\Actions\EditAction::make()
-                    ->visible(function ($record) {
-                        if ($record->status == TicketStatus::CLOSED->value) {
-                            return false;
-                        }
-                        if (
-                            $record->technicalSupport->contains(auth()->user()->id) ||
-                            $record->highTechnicalSupport->contains(auth()->user()->id) ||
-                            $record->customer->contains(auth()->user()->id)
-                        ) {
-                            return true;
-                        }
-                        if (auth()->user()->can('can_access_all_ticket')) {
-                            return true;
-                        } else {
-                            return false;
-                        }
-                    }),
-                Tables\Actions\Action::make('archive')
-                    ->hidden(!(auth()->user()->can('can_archive_ticket')))
-                    ->requiresConfirmation()
-                    ->visible(function (Ticket $record) {
-                        return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value;
-                    })
-                    ->action(function (Ticket $record): void {
-                        DB::transaction(function () use ($record) {
-                            $record->deleted_at = now();
-                            $ticketHistory = new TicketHistory([
-                                'ticket_id' => $record->id,
-                                'title' => 'Ticket has been archived',
-                                'owner' => auth()->user()->email,
-                                'work_order' => $record->work_order,
-                                'sub_work_order' => $record->sub_work_order,
-                                'status' => $record->status,
-                                'handler' => $record->handler,
-                                'created_at' => now(),
-                            ]);
-                            $record->ticketHistory()->save($ticketHistory);
-                            $record->save();
-                        });
-                        Notification::make()
-                            ->title('Ticket has been archived')
-                            ->success()
-                            ->send();
-                    }),
-                Tables\Actions\Action::make('assign')
-                    ->modalHeading('Confirm password to continue')
-                    ->requiresConfirmation()
-                    ->form([
-                        Forms\Components\TextInput::make('password')
-                            ->label('Your password')
-                            ->required()
-                            ->password()
-                            ->currentPassword(),
-                    ])
-                    ->icon('heroicon-o-check-circle')
-                    ->color('success')
-                    ->visible(function ($record) {
-                        if ($record->status == TicketStatus::CLOSED->value) {
-                            return false;
-                        }
-                        if (auth()->user()->can('can_not_self_assign_ticket')) {
-                            return false;
-                        }
-                        if (
-                            $record->customer->contains(auth()->user()->id) ||
-                            $record->technicalSupport->contains(auth()->user()->id) ||
-                            $record->HighTechnicalSupport->contains(auth()->user()->id)
-                        ) {
-                            return false;
-                        } else {
-                            return true;
-                        }
-                    })
-                    ->action(function ($record) {
-                        try {
+                        })
+                        ->requiresConfirmation()
+                        ->action(function (Ticket $record): void {
                             DB::transaction(function () use ($record) {
-                                if (auth()->user()->level_id == 1) {
-                                    $record->customer()->attach(auth()->user()->id);
-                                }
-                                if (auth()->user()->level_id == 2) {
-                                    $record->technicalSupport()->attach(auth()->user()->id);
-                                }
-                                if (auth()->user()->level_id == 3) {
-                                    $record->HighTechnicalSupport()->attach(auth()->user()->id);
-                                }
+                                $record->canceled_at = null;
                                 $ticketHistory = new TicketHistory([
                                     'ticket_id' => $record->id,
-                                    'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
+                                    'title' => 'Ticket has been activated',
                                     'owner' => auth()->user()->email,
                                     'work_order' => $record->work_order,
                                     'sub_work_order' => $record->sub_work_order,
@@ -391,27 +371,113 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     'created_at' => now(),
                                 ]);
                                 $record->ticketHistory()->save($ticketHistory);
-                                if (is_null($record->start_at)) {
-                                    $record->start_at = now();
-                                }
+                                $record->save();
+                                Notification::make()
+                                    ->title('Ticket has been canceled')
+                                    ->success()
+                                    ->send();
+                            });
+                        }),
+
+                    // NOTE: archive_ticket action
+                    Tables\Actions\Action::make('archive_ticket')
+                        ->icon('heroicon-m-archive-box-arrow-down')
+                        ->color('primary')
+                        ->hidden(!(auth()->user()->can('can_archive_ticket')))
+                        ->requiresConfirmation()
+                        ->visible(function (Ticket $record) {
+                            return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value || !is_null($record->canceled_at);
+                        })
+                        ->action(function (Ticket $record): void {
+                            DB::transaction(function () use ($record) {
+                                $record->deleted_at = now();
+                                $ticketHistory = new TicketHistory([
+                                    'ticket_id' => $record->id,
+                                    'title' => 'Ticket has been archived',
+                                    'owner' => auth()->user()->email,
+                                    'work_order' => $record->work_order,
+                                    'sub_work_order' => $record->sub_work_order,
+                                    'status' => $record->status,
+                                    'handler' => $record->handler,
+                                    'created_at' => now(),
+                                ]);
+                                $record->ticketHistory()->save($ticketHistory);
                                 $record->save();
                             });
                             Notification::make()
-                                ->title('ticket assigned to you')
+                                ->title('Ticket has been archived')
                                 ->success()
                                 ->send();
-                        } catch (Exception $e) {
-                            Notification::make()
-                                ->title('Error assigning ticket')
-                                ->body($e->getMessage())
-                                ->danger()
-                                ->send();
-                        }
-                    }),
+                        }),
+
+                    // NOTE: assign action
+                    Tables\Actions\Action::make('assign')
+                        ->requiresConfirmation()
+                        ->icon('heroicon-o-check-circle')
+                        ->color('success')
+                        ->visible(function ($record) {
+                            if (TicketResource::isTicketEnabled($record)) {
+                                if (auth()->user()->can('can_not_self_assign_ticket')) {
+                                    return false;
+                                }
+                                if (
+                                    $record->customer->contains(auth()->user()->id) ||
+                                    $record->technicalSupport->contains(auth()->user()->id) ||
+                                    $record->HighTechnicalSupport->contains(auth()->user()->id)
+                                ) {
+                                    return false;
+                                } else {
+                                    return true;
+                                }
+                            } else {
+                                return false;
+                            }
+                        })
+                        ->action(function ($record) {
+                            try {
+                                DB::transaction(function () use ($record) {
+                                    if (auth()->user()->level_id == 1) {
+                                        $record->customer()->attach(auth()->user()->id);
+                                    }
+                                    if (auth()->user()->level_id == 2) {
+                                        $record->technicalSupport()->attach(auth()->user()->id);
+                                    }
+                                    if (auth()->user()->level_id == 3) {
+                                        $record->HighTechnicalSupport()->attach(auth()->user()->id);
+                                    }
+                                    $ticketHistory = new TicketHistory([
+                                        'ticket_id' => $record->id,
+                                        'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
+                                        'owner' => auth()->user()->email,
+                                        'work_order' => $record->work_order,
+                                        'sub_work_order' => $record->sub_work_order,
+                                        'status' => $record->status,
+                                        'handler' => $record->handler,
+                                        'created_at' => now(),
+                                    ]);
+                                    $record->ticketHistory()->save($ticketHistory);
+                                    if (is_null($record->start_at)) {
+                                        $record->start_at = now();
+                                    }
+                                    $record->save();
+                                });
+                                Notification::make()
+                                    ->title('Ticket assigned to you')
+                                    ->success()
+                                    ->send();
+                            } catch (Exception $e) {
+                                Notification::make()
+                                    ->title('Error assigning ticket')
+                                    ->body($e->getMessage())
+                                    ->danger()
+                                    ->send();
+                            }
+                        }),
+                ]),
             ])
             ->bulkActions([
                 ExportBulkAction::make()
-                    ->hidden(!(auth()->user()->can('export_ticket')))
+                    ->hidden(!(auth()->user()->can('can_export_excel_ticket')))
                     ->exports([
                         ExcelExport::make()
                             ->withColumns([
@@ -466,27 +532,27 @@ class TicketResource extends Resource implements HasShieldPermissions
         return [
             Forms\Components\Section::make('Ticket Info')
                 ->schema([
-                    Forms\Components\TextInput::make('ticket_identifier')
-                        ->disabled(true)
-                        ->dehydrated(true)
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('title')
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('ne_product')
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('sw_version')
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('company')
-                        ->default(auth()->user()->company)
-                        ->columnSpanFull(),
-                    Forms\Components\Textarea::make('description')
-                        ->required()
-                        ->columnSpanFull()
-                        ->maxLength(512),
+                    Forms\Components\Section::make('Ticket Data')
+                        ->schema([
+                            Forms\Components\TextInput::make('title')
+                                ->required()
+                                ->maxLength(64),
+                            Forms\Components\TextInput::make('ne_product')
+                                ->required()
+                                ->maxLength(64),
+                            Forms\Components\TextInput::make('sw_version')
+                                ->required()
+                                ->maxLength(64),
+                            Forms\Components\TextInput::make('company')
+                                ->default(auth()->user()->company)
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('description')
+                                ->required()
+                                ->columnSpanFull()
+                                ->maxLength(512),
+                        ])
+                        ->columnSpan(4)
+                        ->columns(3),
                     Forms\Components\Section::make('Ticket Meta Data')
                         ->schema([
                             Forms\Components\Select::make('type_id')
@@ -503,20 +569,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                             Forms\Components\Select::make('department_id')
                                 ->required()
                                 ->label('Department')
-                                ->live()
-                                ->afterStateUpdated(function ($state, $set) {
-                                    $latestTicketIdentifier = Ticket::where('department_id', $state)->latest()->value('ticket_identifier');
-                                    $ticketIdentifier = 1;
-                                    if ($latestTicketIdentifier !== null) {
-                                        $parts = explode('-', $latestTicketIdentifier);
-                                        $ticketIdentifier = intval($parts[1]) + 1;
-                                    }
-                                    $ticketIdentifier = Department::where('id', $state)->first()->code . '-' . str_pad($ticketIdentifier, 6, '0', STR_PAD_LEFT);
-                                    $set(
-                                        'ticket_identifier',
-                                        $ticketIdentifier
-                                    );
-                                })
                                 ->options(function () {
                                     if (auth()->user()->can('can_select_any_department_ticket')) {
                                         return Department::all()->where('title', '!=', 'default')->pluck('title', 'id');
@@ -542,63 +594,84 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->columns(3),
                 ])
                 ->columnSpan(3)
-                ->columns(4),
+                ->columns(3),
         ];
     }
 
     private static function getEditForm(): array
     {
         return [
+            Forms\Components\TextInput::make('deleted_at')
+                ->visible(function ($record) {
+                    return !is_null($record->deleted_at);
+                })
+                ->columnSpan(3)
+                ->label('Archived At')
+                ->disabled(true)
+                ->dehydrated(true),
+            Forms\Components\TextInput::make('canceled_at')
+                ->visible(function ($record) {
+                    return !is_null($record->canceled_at);
+                })
+                ->columnSpan(3)
+                ->label('Canceled At')
+                ->disabled(true)
+                ->dehydrated(true),
             Forms\Components\Section::make('Ticket Info')
                 ->schema([
-                    Forms\Components\TextInput::make('ticket_identifier')
-                        ->disabled(true)
-                        ->dehydrated(true),
-                    Forms\Components\TextInput::make('title')
-                        ->disabled(
-                            function ($record) {
-                                return self::getEditAllCondition($record);
-                            }
-                        )
-                        ->dehydrated(true)
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('ne_product')
-                        ->disabled(
-                            function ($record) {
-                                return self::getEditAllCondition($record);
-                            }
-                        )
-                        ->dehydrated(true)
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('sw_version')
-                        ->disabled(
-                            function ($record) {
-                                return self::getEditAllCondition($record);
-                            }
-                        )
-                        ->dehydrated(true)
-                        ->required()
-                        ->maxLength(64),
-                    Forms\Components\TextInput::make('company')
-                        ->disabled(
-                            function ($record) {
-                                return self::getEditAllCondition($record);
-                            }
-                        )
-                        ->dehydrated(true)
-                        ->columnSpanFull(),
-                    Forms\Components\Textarea::make('description')
-                        ->disabled(
-                            function ($record) {
-                                return self::getEditAllCondition($record);
-                            }
-                        )
-                        ->dehydrated(true)
-                        ->required()
-                        ->columnSpanFull()
-                        ->maxLength(512),
+                    Forms\Components\Section::make('Ticket Data')
+                        ->schema([
+                            Forms\Components\TextInput::make('ticket_identifier')
+                                ->disabled(true)
+                                ->dehydrated(true),
+                            Forms\Components\TextInput::make('title')
+                                ->disabled(
+                                    function ($record) {
+                                        return self::getDisableEditFormCondition($record);
+                                    }
+                                )
+                                ->dehydrated(true)
+                                ->required()
+                                ->maxLength(64),
+                            Forms\Components\TextInput::make('ne_product')
+                                ->disabled(
+                                    function ($record) {
+                                        return self::getDisableEditFormCondition($record);
+                                    }
+                                )
+                                ->dehydrated(true)
+                                ->required()
+                                ->maxLength(64),
+                            Forms\Components\TextInput::make('sw_version')
+                                ->disabled(
+                                    function ($record) {
+                                        return self::getDisableEditFormCondition($record);
+                                    }
+                                )
+                                ->dehydrated(true)
+                                ->required()
+                                ->maxLength(64),
+                            Forms\Components\TextInput::make('company')
+                                ->disabled(
+                                    function ($record) {
+                                        return self::getDisableEditFormCondition($record);
+                                    }
+                                )
+                                ->dehydrated(true)
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('description')
+                                ->disabled(
+                                    function ($record) {
+                                        return self::getDisableEditFormCondition($record);
+                                    }
+                                )
+                                ->dehydrated(true)
+                                ->required()
+                                ->columnSpanFull()
+                                ->maxLength(512),
+                        ])
+                        ->columnSpan(4)
+                        ->columns(4),
                     Forms\Components\Section::make('Ticket Meta Data')
                         ->schema([
                             Forms\Components\Select::make('type_id')
@@ -627,7 +700,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->options(Category::all()->pluck('title', 'id')),
                         ])
                         ->columnSpan(4)
-                        ->columns(4),
+                        ->columns(2),
                     Forms\Components\Section::make('Ticket Files')
                         ->schema([
                             Forms\Components\FileUpload::make('attachments')
@@ -639,6 +712,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ])
                         ->columnSpan(4)
                         ->columns(3),
+                ])
+                ->columnSpan(2)
+                ->columns(4),
+            Forms\Components\Section::make('Ticket Sub Info')
+                ->disabled()
+                ->schema([
                     Forms\Components\Section::make('Ticket Work Order')
                         ->disabled()
                         ->schema([
@@ -663,8 +742,23 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     Self::getTicketHandler()
                                 ),
                         ])
-                        ->columnSpan(4)
-                        ->columns(4),
+                        ->columnSpan(1)
+                        ->columns(1),
+                    Forms\Components\Section::make('Ticket Proccess Time')
+                        ->schema([
+                            Forms\Components\DateTimePicker::make('start_at')
+                                ->hidden(!(auth()->user()->can('view_start_at_ticket')))
+                                ->live()
+                                ->disabled(true)
+                                ->dehydrated(true),
+                            Forms\Components\DateTimePicker::make('end_at')
+                                ->hidden(!(auth()->user()->can('view_end_at_ticket')))
+                                ->live()
+                                ->disabled(true)
+                                ->dehydrated(true),
+                        ])
+                        ->columnSpan(1)
+                        ->columns(1),
                     Forms\Components\Section::make('Ticket Users')
                         ->schema([
                             Forms\Components\Select::make('customer')
@@ -686,26 +780,11 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->disabled(true)
                                 ->dehydrated(true),
                         ])
-                        ->columnSpan(4)
-                        ->columns(3),
-                    Forms\Components\Section::make('Ticket Proccess Time')
-                        ->schema([
-                            Forms\Components\DateTimePicker::make('start_at')
-                                ->hidden(!(auth()->user()->can('view_start_at_ticket')))
-                                ->live()
-                                ->disabled(true)
-                                ->dehydrated(true),
-                            Forms\Components\DateTimePicker::make('end_at')
-                                ->hidden(!(auth()->user()->can('view_end_at_ticket')))
-                                ->live()
-                                ->disabled(true)
-                                ->dehydrated(true),
-                        ])
-                        ->columnSpan(4)
-                        ->columns(2),
+                        ->columnSpan(1)
+                        ->columns(1),
                 ])
-                ->columnSpan(3)
-                ->columns(4),
+                ->columnSpan(1)
+                ->columns(1),
         ];
     }
 
@@ -718,16 +797,27 @@ class TicketResource extends Resource implements HasShieldPermissions
                 })
                 ->columnSpan(3)
                 ->label('Archived At'),
+            Forms\Components\TextInput::make('canceled_at')
+                ->visible(function ($record) {
+                    return !is_null($record->canceled_at);
+                })
+                ->columnSpan(3)
+                ->label('Canceled At'),
             Forms\Components\Section::make('Ticket Info')
                 ->schema([
-                    Forms\Components\TextInput::make('ticket_identifier'),
-                    Forms\Components\TextInput::make('title'),
-                    Forms\Components\TextInput::make('ne_product'),
-                    Forms\Components\TextInput::make('sw_version'),
-                    Forms\Components\TextInput::make('company')
-                        ->columnSpanFull(),
-                    Forms\Components\Textarea::make('description')
-                        ->columnSpanFull(),
+                    Forms\Components\Section::make('Ticket Data')
+                        ->schema([
+                            Forms\Components\TextInput::make('ticket_identifier'),
+                            Forms\Components\TextInput::make('title'),
+                            Forms\Components\TextInput::make('ne_product'),
+                            Forms\Components\TextInput::make('sw_version'),
+                            Forms\Components\TextInput::make('company')
+                                ->columnSpanFull(),
+                            Forms\Components\Textarea::make('description')
+                                ->columnSpanFull(),
+                        ])
+                        ->columnSpan(4)
+                        ->columns(4),
                     Forms\Components\Section::make('Ticket Meta Data')
                         ->schema([
                             Forms\Components\Select::make('type_id')
@@ -755,6 +845,11 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ])
                         ->columnSpan(4)
                         ->columns(3),
+                ])
+                ->columnSpan(2)
+                ->columns(4),
+            Forms\Components\Section::make('Ticket Sub Info')
+                ->schema([
                     Forms\Components\Section::make('Ticket Work Order')
                         ->schema([
                             Forms\Components\Select::make('work_order')
@@ -776,8 +871,17 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     Self::getTicketHandler()
                                 ),
                         ])
-                        ->columnSpan(4)
-                        ->columns(4),
+                        ->columnSpan(1)
+                        ->columns(1),
+                    Forms\Components\Section::make('Ticket Proccess Time')
+                        ->schema([
+                            Forms\Components\DateTimePicker::make('start_at')
+                                ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
+                            Forms\Components\DateTimePicker::make('end_at')
+                                ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
+                        ])
+                        ->columnSpan(1)
+                        ->columns(1),
                     Forms\Components\Section::make('Ticket Users')
                         ->schema([
                             Forms\Components\Select::make('customer')
@@ -793,29 +897,41 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->multiple()
                                 ->relationship('highTechnicalSupport', 'email'),
                         ])
-                        ->columnSpan(4)
-                        ->columns(3),
-                    Forms\Components\Section::make('Ticket Proccess Time')
-                        ->schema([
-                            Forms\Components\DateTimePicker::make('start_at')
-                                ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
-                            Forms\Components\DateTimePicker::make('end_at')
-                                ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
-                        ])
-                        ->columnSpan(4)
-                        ->columns(2),
+                        ->columnSpan(1)
+                        ->columns(1),
                 ])
-                ->columnSpan(3)
-                ->columns(4),
+                ->columnSpan(1)
+                ->columns(1),
         ];
     }
 
-    private static function getEditAllCondition($record): bool
+    public static function isTicketEnabled($record): bool
     {
-        if (auth()->user()->can('can_edit_all_ticket')) {
+        if ($record->status == TicketStatus::CLOSED->value) {
+            return false;
+        }
+        if (!is_null($record->deleted_at)) {
+            return false;
+        }
+        if (!is_null($record->canceled_at)) {
+            return false;
+        }
+        return true;
+    }
+
+    private static function getDisableEditFormCondition($record): bool
+    {
+        if (auth()->user()->can('can_edit_any_info_ticket')) {
             return false;
         } else {
-            return !($record->customer->contains(auth()->user()->id));
+            if (
+                $record->technicalSupport->count() > 0 ||
+                $record->highTechnicalSupport->count() > 0
+            ) {
+                return true && self::isTicketEnabled($record);
+            } else {
+                return is_null($record->customer()->where('id', auth()->user()->id)->where('owner', 1)->first()) && self::isTicketEnabled($record);
+            }
         }
     }
 
@@ -827,6 +943,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
                     TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
                     TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by Technical Support',
                     TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
                     TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
                     TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
@@ -910,7 +1027,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
             TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
             TicketStatus::CLOSED->value => 'Closed',
-            TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value => 'Hight Level Support Pending',
+            TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'Hight Technical Support Pending',
             TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'Technical Support Pending',
             TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
         ];
@@ -921,7 +1038,49 @@ class TicketResource extends Resource implements HasShieldPermissions
         return [
             TicketHandler::CUSTOMER->value => 'Customer',
             TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
-            TicketHandler::HIGH_LEVEL_SUPPORT->value => 'High level support',
+            TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'High Technical support',
         ];
+    }
+
+    public static function canEdit(Model $record): bool
+    {
+        // NOTE: enter ticket only if ticket is enabled and assigned or has {can_access_all_ticket} permission
+        if (TicketResource::isTicketEnabled($record)) {
+            if (
+                $record->technicalSupport->contains(auth()->user()->id) ||
+                $record->highTechnicalSupport->contains(auth()->user()->id) ||
+                $record->customer->contains(auth()->user()->id)
+            ) {
+                return true;
+            }
+            if (auth()->user()->can('can_access_all_ticket')) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
+    }
+
+    public static function canView(Model $record): bool
+    {
+        // NOTE:  view details only if assigned or has {can_view_any_details_ticket} permission
+        if (auth()->user()->can('can_view_any_details_ticket')) {
+            return true;
+        }
+        if (TicketResource::isTicketEnabled($record)) {
+            if (
+                $record->technicalSupport->contains(auth()->user()->id) ||
+                $record->highTechnicalSupport->contains(auth()->user()->id) ||
+                $record->customer->contains(auth()->user()->id)
+            ) {
+                return true;
+            } else {
+                return false;
+            }
+        } else {
+            return false;
+        }
     }
 }

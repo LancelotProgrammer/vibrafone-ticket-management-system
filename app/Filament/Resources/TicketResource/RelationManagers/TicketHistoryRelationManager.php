@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TicketResource\RelationManagers;
 
 use App\Enums\TicketWorkOrder;
+use App\Filament\Resources\TicketResource;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
@@ -26,6 +27,7 @@ class TicketHistoryRelationManager extends RelationManager
                     ->columnSpanFull(),
                 Forms\Components\FileUpload::make('attachments')
                     ->dehydrated(false)
+                    ->multiple()
                     ->openable()
                     ->disabled()
                     ->columnSpanFull(),
@@ -54,18 +56,19 @@ class TicketHistoryRelationManager extends RelationManager
                         ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
                         ->orderByDesc('created_at', 'des');
                 }
             })
             ->recordTitleAttribute('title')
             ->columns([
-                Tables\Columns\TextColumn::make('title')->toggleable(),
-                Tables\Columns\TextColumn::make('body')->toggleable(),
-                Tables\Columns\TextColumn::make('work_order')->toggleable(),
-                Tables\Columns\TextColumn::make('sub_work_order')->toggleable(),
-                Tables\Columns\TextColumn::make('status')->toggleable(),
-                Tables\Columns\TextColumn::make('handler')->toggleable(),
+                Tables\Columns\TextColumn::make('title')->toggleable()->limit(100)->searchable(),
+                Tables\Columns\TextColumn::make('body')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('work_order')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('sub_work_order')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('status')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('handler')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('owner')->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->toggleable(),
             ])
@@ -85,7 +88,10 @@ class TicketHistoryRelationManager extends RelationManager
                             ->success()
                             ->send();
                     })
-                    ->hidden(!(auth()->user()->can('edit_history_date_ticket'))),
+                    ->hidden(!(auth()->user()->can('edit_history_date_ticket')))
+                    ->visible(function (RelationManager $livewire) {
+                        return TicketResource::isTicketEnabled($livewire->getOwnerRecord());
+                    }),
                 ViewAction::make()
                     ->label('View Attachments'),
             ])

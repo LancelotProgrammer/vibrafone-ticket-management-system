@@ -14,6 +14,7 @@ use App\Models\Level;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\User;
+use App\Rules\Emails;
 use Exception;
 use Filament\Actions;
 use Filament\Actions\ActionGroup;
@@ -42,18 +43,16 @@ class EditTicket extends EditRecord
 
             //NOTE: manage escalate_ticket
             Actions\Action::make('escalate_ticket')
-                ->hidden(!(auth()->user()->can('escalate_ticket')))
+                ->hidden(!(auth()->user()->can('can_escalate_ticket')))
                 ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
+                    if (TicketResource::isTicketEnabled($record)) {
+                        if ($record->technicalSupport->count() <= 0) {
+                            return false;
+                        }
+                        return $record->highTechnicalSupport->count() <= 0;
+                    } else {
                         return false;
                     }
-                    if ($record->status == TicketStatus::CLOSED->value) {
-                        return false;
-                    }
-                    if ($record->technicalSupport->count() <= 0) {
-                        return false;
-                    }
-                    return $record->highTechnicalSupport->count() <= 0;
                 })
                 ->form([
                     Select::make('user_id')
@@ -69,8 +68,8 @@ class EditTicket extends EditRecord
 
                             $record->highTechnicalSupport()->attach($data['user_id']);
                             $record->level_id = Level::where('code', 2)->first()->id;
-                            $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                            $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                            $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                            $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
                                 'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
@@ -134,14 +133,15 @@ class EditTicket extends EditRecord
                     }
                 }),
 
-            //NOTE: manage assign_ticket
+            //NOTE: assign_ticket
             Actions\Action::make('assign_ticket')
-                ->hidden(!(auth()->user()->can('assign_technical_support_ticket')))
+                ->hidden(!(auth()->user()->can('can_assign_technical_support_ticket')))
                 ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
+                    if (TicketResource::isTicketEnabled($record)) {
+                        return $record->technicalSupport->count() <= 0;
+                    } else {
                         return false;
                     }
-                    return $record->technicalSupport->count() <= 0;
                 })
                 ->form([
                     Select::make('user_id')
@@ -180,17 +180,48 @@ class EditTicket extends EditRecord
                         ->send();
                 }),
 
+            //NOTE: cancel_ticket
+            Actions\Action::make('cancel_ticket')
+                ->hidden(!(auth()->user()->can('can_cancel_ticket')))
+                ->visible(function (Ticket $record) {
+                    return TicketResource::isTicketEnabled($record);
+                })
+                ->requiresConfirmation()
+                ->action(function (Ticket $record): void {
+                    DB::transaction(function () use ($record) {
+                        $record->canceled_at = now();
+                        $ticketHistory = new TicketHistory([
+                            'ticket_id' => $record->id,
+                            'title' => 'Ticket has been canceled',
+                            'owner' => auth()->user()->email,
+                            'work_order' => $record->work_order,
+                            'sub_work_order' => $record->sub_work_order,
+                            'status' => $record->status,
+                            'handler' => $record->handler,
+                            'created_at' => now(),
+                        ]);
+                        $record->ticketHistory()->save($ticketHistory);
+                        $record->save();
+                        $this->refreshFormData([
+                            'canceled_at',
+                        ]);
+                        Notification::make()
+                            ->title('Ticket has been canceled')
+                            ->success()
+                            ->send();
+                        return redirect('/admin/tickets/' . $record->id);
+                    });
+                }),
+
             //NOTE: create work order type
             Actions\Action::make('create_work_order_type')
                 ->hidden(!(auth()->user()->can('create_work_order_type_ticket')))
                 ->visible(function (Ticket $record) {
-                    if (!is_null($record->deleted_at)) {
+                    if (TicketResource::isTicketEnabled($record)) {
+                        return $record->technicalSupport->count() > 0;
+                    } else {
                         return false;
                     }
-                    if ($record->status == TicketStatus::CLOSED->value) {
-                        return false;
-                    }
-                    return $record->technicalSupport->count() > 0;
                 })
                 ->form(
                     Self::getCreateOrderTypeForm()
@@ -210,13 +241,11 @@ class EditTicket extends EditRecord
                 Actions\Action::make('add_technical_support')
                     ->hidden(!(auth()->user()->can('add_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
-                        if (!is_null($record->deleted_at)) {
+                        if (TicketResource::isTicketEnabled($record)) {
+                            return $record->technicalSupport->count() >= 1;
+                        } else {
                             return false;
                         }
-                        if ($record->status == TicketStatus::CLOSED->value) {
-                            return false;
-                        }
-                        return $record->technicalSupport->count() >= 1;
                     })
                     ->requiresConfirmation()
                     ->form([
@@ -258,13 +287,11 @@ class EditTicket extends EditRecord
                 Actions\Action::make('remove_technical_support')
                     ->hidden(!(auth()->user()->can('remove_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
-                        if (!is_null($record->deleted_at)) {
+                        if (TicketResource::isTicketEnabled($record)) {
+                            return $record->technicalSupport->count() >= 2;
+                        } else {
                             return false;
                         }
-                        if ($record->status == TicketStatus::CLOSED->value) {
-                            return false;
-                        }
-                        return $record->technicalSupport->count() >= 2;
                     })
                     ->requiresConfirmation()
                     ->form([
@@ -300,13 +327,11 @@ class EditTicket extends EditRecord
                 Actions\Action::make('add_high_technical_support')
                     ->hidden(!(auth()->user()->can('add_high_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
-                        if (!is_null($record->deleted_at)) {
+                        if (TicketResource::isTicketEnabled($record)) {
+                            return $record->highTechnicalSupport->count() >= 1;
+                        } else {
                             return false;
                         }
-                        if ($record->status == TicketStatus::CLOSED->value) {
-                            return false;
-                        }
-                        return $record->highTechnicalSupport->count() >= 1;
                     })
                     ->requiresConfirmation()
                     ->form([
@@ -348,13 +373,11 @@ class EditTicket extends EditRecord
                 Actions\Action::make('remove_high_technical_support')
                     ->hidden(!(auth()->user()->can('remove_high_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
-                        if (!is_null($record->deleted_at)) {
+                        if (TicketResource::isTicketEnabled($record)) {
+                            return $record->highTechnicalSupport->count() >= 2;
+                        } else {
                             return false;
                         }
-                        if ($record->status == TicketStatus::CLOSED->value) {
-                            return false;
-                        }
-                        return $record->highTechnicalSupport->count() >= 2;
                     })
                     ->requiresConfirmation()
                     ->form([
@@ -411,7 +434,7 @@ class EditTicket extends EditRecord
         $users = User::where('department_id', $record->department_id)
             ->where('level_id', '=', 3)
             ->pluck('email', 'id');
-        $managers = User::permission('can_be_assigned_as_technical_support_ticket')
+        $managers = User::permission('can_be_assigned_as_high_technical_support_ticket')
             ->pluck('email', 'id');
         return $users->union($managers);
     }
@@ -562,6 +585,7 @@ class EditTicket extends EditRecord
                                     return Self::orderTypeEmailFormCondition($get);
                                 }),
                             TextInput::make('cc')
+                                ->rules([new Emails])
                                 ->prefix(auth()->user()->email . ',')
                                 ->required(function ($get) {
                                     return Self::orderTypeEmailFormCondition($get);
@@ -588,6 +612,7 @@ class EditTicket extends EditRecord
                         TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
                         TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
                         TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by Technical Support',
                         TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
                     ],
                     'Customer' => [
@@ -635,7 +660,6 @@ class EditTicket extends EditRecord
     {
         DB::transaction(function () use ($data, $record) {
             $redirectFlag = false;
-
             if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value) {
                 if ($data['sub_work_order'] == TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value) {
                     $record->status = TicketStatus::CUSTOMER_PENDING->value;
@@ -721,18 +745,26 @@ class EditTicket extends EditRecord
                 }
             }
             if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
-                $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                $status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
                 $record->work_order = $data['work_order'];
                 $record->sub_work_order = null;
             }
             if ($data['work_order'] == TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value) {
-                $record->status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                $record->handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
-                $status = TicketStatus::HIGHT_LEVEL_SUPPORT_PENDING->value;
-                $handler = TicketHandler::HIGH_LEVEL_SUPPORT->value;
+                $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $record->work_order = $data['work_order'];
+                $record->sub_work_order = null;
+            }
+            if ($data['work_order'] == TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value) {
+                $record->status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::TECHNICAL_SUPPORT->value;
                 $record->work_order = $data['work_order'];
                 $record->sub_work_order = null;
             }

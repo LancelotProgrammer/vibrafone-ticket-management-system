@@ -76,7 +76,7 @@ class TicketPolicy
      */
     public function deleteAny(User $user): bool
     {
-        return $user->can('delete_any_ticket');
+        return $user->can('{{ DeleteAny }}');
     }
 
     /**
