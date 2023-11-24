@@ -64,9 +64,9 @@ class TicketResource extends Resource implements HasShieldPermissions
             'can_ignore_level_when_view',
             'can_ignore_department_when_view',
 
-            'can_edit_any_info', // NOTE: enables users to edit the unlocked fields of any ticket at any condition | depends on the view permission filter
+            'can_edit_any_info', // NOTE: enables users to edit the unlocked fields of any ticket at any condition | depends on the update permission filter
             'can_view_any_details', // NOTE: enables users to view ticket details at any condition | depends on the view permission filter
-            'can_access_all', // NOTE: enables users to interact with any ticket only if it is enabled | depends on the view permission filter
+            'can_access_any', // NOTE: enables users to interact with any ticket only if it is enabled | depends on the view permission filter
 
             'can_archive',
             'can_export_excel',
@@ -116,6 +116,14 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_high_technical_support_order_type}
             'view_history_customer_order_type',
             'view_history_high_technical_support_order_type',
+
+            'view_archived_count',
+            'view_canceled_count',
+            'view_closed_count',
+            'view_owned_count',
+            'view_escalated_count',
+            'view_opened_count',
+            'view_total_count',
         ];
     }
 
@@ -1044,7 +1052,7 @@ class TicketResource extends Resource implements HasShieldPermissions
 
     public static function canEdit(Model $record): bool
     {
-        // NOTE: enter ticket only if ticket is enabled and assigned or has {can_access_all_ticket} permission
+        // NOTE: enter ticket only if ticket is enabled and assigned or has {can_access_any_ticket} permission
         if (TicketResource::isTicketEnabled($record)) {
             if (
                 $record->technicalSupport->contains(auth()->user()->id) ||
@@ -1053,7 +1061,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             ) {
                 return true;
             }
-            if (auth()->user()->can('can_access_all_ticket')) {
+            if (auth()->user()->can('can_access_any_ticket')) {
                 return true;
             } else {
                 return false;

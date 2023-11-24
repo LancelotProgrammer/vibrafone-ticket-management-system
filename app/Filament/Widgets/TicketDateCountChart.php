@@ -5,7 +5,7 @@ namespace App\Filament\Widgets;
 use Filament\Widgets\ChartWidget;
 use Illuminate\Support\Facades\DB;
 
-class TicketChart extends ChartWidget
+class TicketDateCountChart extends ChartWidget
 {
     protected int | string | array $columnSpan = 'half';
 
@@ -13,7 +13,7 @@ class TicketChart extends ChartWidget
 
     protected static ?string $pollingInterval = null;
 
-    protected static ?string $heading = 'Ticket Chart';
+    protected static ?string $heading = 'Ticket Date Chart';
 
     protected function getData(): array
     {
@@ -44,6 +44,6 @@ class TicketChart extends ChartWidget
 
     public static function canView(): bool
     {
-        return auth()->user()->can('widget_TicketChart');
+        return auth()->user()->can('widget_TicketDateCountChart');
     }
 }

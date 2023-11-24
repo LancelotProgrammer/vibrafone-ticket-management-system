@@ -7,7 +7,7 @@ use Filament\Tables;
 use Filament\Tables\Table;
 use Filament\Widgets\TableWidget as BaseWidget;
 
-class LatestContacts extends BaseWidget
+class LatestContactsTable extends BaseWidget
 {
     protected int | string | array $columnSpan = 'half';
 
@@ -30,6 +30,6 @@ class LatestContacts extends BaseWidget
 
     public static function canView(): bool
     {
-        return auth()->user()->can('widget_LatestContacts');
+        return auth()->user()->can('widget_LatestContactsTable');
     }
 }
