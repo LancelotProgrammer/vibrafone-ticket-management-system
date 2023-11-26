@@ -5,7 +5,6 @@ namespace App\Filament\Widgets;
 use App\Enums\TicketStatus;
 use App\Models\Ticket;
 use Filament\Widgets\ChartWidget;
-use Illuminate\Support\Facades\DB;
 
 class TicketTypeCountChart extends ChartWidget
 {
@@ -24,7 +23,7 @@ class TicketTypeCountChart extends ChartWidget
         $archivedTickets = Ticket::whereNotNull('deleted_at')->count();
         $canceledTickets = Ticket::whereNotNull('canceled_at')->count();
         $closedTickets = Ticket::where('status', TicketStatus::CLOSED->value)->count();
-        $escalatedTickets = Ticket::where('level_id', 3)->count();
+        $escalatedTickets = Ticket::whereNotNull('escalated_at')->count();
         $openedTickets = Ticket::whereNotNull('start_at')->count();
         return [
             'datasets' => [

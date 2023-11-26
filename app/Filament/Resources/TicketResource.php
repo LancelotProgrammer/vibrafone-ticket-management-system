@@ -75,6 +75,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_handler',
             'view_status',
             'view_created_at',
+            'view_escalated_at',
             'view_start_at',
             'view_end_at',
             'view_archived_at',
@@ -105,7 +106,7 @@ class TicketResource extends Resource implements HasShieldPermissions
 
             'create_work_order_type',
             // NOTE: all permissions below needs the {create_work_order_type} permission to be enabled
-            'view_all_create_order_type',// this permission make the user ignores {view_customer_create_order_type / view_high_technical_support_create_order_type}
+            'view_all_create_order_type', // this permission make the user ignores {view_customer_create_order_type / view_high_technical_support_create_order_type}
             'view_customer_create_order_type',
             'view_high_technical_support_create_order_type',
             'send_email_in_order_type',
@@ -216,17 +217,36 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->formatStateUsing(function ($state) {
                                 return 'Created At: ' . $state;
                             })
+                            ->badge()
+                            ->color('gray')
                             ->hidden(!(auth()->user()->can('view_created_at_ticket'))),
+                        Tables\Columns\TextColumn::make('escalated_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Escalated At: ' . $state;
+                            })
+                            ->badge()
+                            ->color('gray')
+                            ->hidden(!(auth()->user()->can('view_escalated_at_ticket'))),
                         Tables\Columns\TextColumn::make('start_at')
                             ->formatStateUsing(function ($state) {
                                 return 'Started At: ' . $state;
                             })
+                            ->badge()
+                            ->color('gray')
                             ->hidden(!(auth()->user()->can('view_start_at_ticket'))),
                         Tables\Columns\TextColumn::make('end_at')
                             ->formatStateUsing(function ($state) {
-                                return 'Ended At: ' . $state;
+                                return 'Closed At: ' . $state;
                             })
+                            ->badge()
+                            ->color('gray')
                             ->hidden(!(auth()->user()->can('view_end_at_ticket'))),
+                        Tables\Columns\TextColumn::make('canceled_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Canceled At: ' . $state;
+                            })
+                            ->badge()
+                            ->color('danger'),
                         Tables\Columns\TextColumn::make('deleted_at')
                             ->formatStateUsing(function ($state) {
                                 return 'Archived At: ' . $state;
@@ -234,12 +254,6 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->hidden(!(auth()->user()->can('view_archived_at_ticket')))
                             ->badge()
                             ->color('primary'),
-                        Tables\Columns\TextColumn::make('canceled_at')
-                            ->formatStateUsing(function ($state) {
-                                return 'Canceled At: ' . $state;
-                            })
-                            ->badge()
-                            ->color('danger'),
                     ]),
                     Split::make([
                         Stack::make([
@@ -297,8 +311,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
                     ->options([
                         TicketHandler::CUSTOMER->value => 'Customer',
-                        TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
-                        TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'High Technical support',
+                        TicketHandler::TECHNICAL_SUPPORT->value => 'SL1',
+                        TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'High SL1',
                     ]),
                 SelectFilter::make('status')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
@@ -307,8 +321,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                         TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
                         TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
                         TicketStatus::CLOSED->value => 'Closed',
-                        TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'High Technical Support Pending',
-                        TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'Technical Support Pending',
+                        TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'High SL1 Pending',
+                        TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'SL1 Pending',
                         TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
                     ]),
                 SelectFilter::make('level_id')
@@ -394,7 +408,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ->hidden(!(auth()->user()->can('can_archive_ticket')))
                         ->requiresConfirmation()
                         ->visible(function (Ticket $record) {
-                            return is_null($record->deleted_at) && $record->status == TicketStatus::CLOSED->value || !is_null($record->canceled_at);
+                            return is_null($record->deleted_at) && ($record->status == TicketStatus::CLOSED->value || !is_null($record->canceled_at));
                         })
                         ->action(function (Ticket $record): void {
                             DB::transaction(function () use ($record) {
@@ -482,8 +496,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                             }
                         }),
                 ])
-                ->button()
-                ->label('Actions'),
+                    ->button()
+                    ->label('Actions'),
             ])
             ->bulkActions([
                 ExportBulkAction::make()
@@ -508,7 +522,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->formatStateUsing(function ($record) {
                                         return Category::where('id', $record->category_id)->first()->title;
                                     }),
-                                Column::make('esclated')
+                                Column::make('escalated')
                                     ->getStateUsing(function ($record) {
                                         return 'test';
                                     }),
@@ -612,6 +626,7 @@ class TicketResource extends Resource implements HasShieldPermissions
     {
         return [
             Forms\Components\TextInput::make('deleted_at')
+                ->hidden(!(auth()->user()->can('view_archived_at_ticket')))
                 ->visible(function ($record) {
                     return !is_null($record->deleted_at);
                 })
@@ -625,6 +640,15 @@ class TicketResource extends Resource implements HasShieldPermissions
                 })
                 ->columnSpan(3)
                 ->label('Canceled At')
+                ->disabled(true)
+                ->dehydrated(true),
+            Forms\Components\TextInput::make('escalated_at')
+                ->hidden(!(auth()->user()->can('view_escalated_at_ticket')))
+                ->visible(function ($record) {
+                    return !is_null($record->escalated_at);
+                })
+                ->columnSpan(3)
+                ->label('Escalated At')
                 ->disabled(true)
                 ->dehydrated(true),
             Forms\Components\Section::make('Ticket Info')
@@ -802,6 +826,7 @@ class TicketResource extends Resource implements HasShieldPermissions
     {
         return [
             Forms\Components\TextInput::make('deleted_at')
+                ->hidden(!(auth()->user()->can('view_archived_at_ticket')))
                 ->visible(function ($record) {
                     return !is_null($record->deleted_at);
                 })
@@ -813,6 +838,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                 })
                 ->columnSpan(3)
                 ->label('Canceled At'),
+            Forms\Components\TextInput::make('escalated_at')
+                ->hidden(!(auth()->user()->can('view_escalated_at_ticket')))
+                ->visible(function ($record) {
+                    return !is_null($record->escalated_at);
+                })
+                ->columnSpan(3)
+                ->label('Escalated At'),
             Forms\Components\Section::make('Ticket Info')
                 ->schema([
                     Forms\Components\Section::make('Ticket Data')
@@ -950,11 +982,11 @@ class TicketResource extends Resource implements HasShieldPermissions
         if (auth()->user()->can('view_all_order_type_ticket')) {
             if ($record->level_id == Level::where('code', 2)->first()->id) {
                 return [
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
+                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
                     TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by Technical Support',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
                     TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
                     TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
                     TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
@@ -983,10 +1015,10 @@ class TicketResource extends Resource implements HasShieldPermissions
         }
         if (auth()->user()->can('view_high_technical_support_order_type_ticket')) {
             return [
-                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
+                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
                 TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
-                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
+                TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
             ];
         }
         return [];
@@ -1000,9 +1032,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                     TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
                     TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
                     TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
-                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
-                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
-                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
+                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
+                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
+                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final SL1 Information',
                 ];
             } else {
                 return [
@@ -1022,9 +1054,9 @@ class TicketResource extends Resource implements HasShieldPermissions
         }
         if (auth()->user()->can('view_support_order_type_ticket')) {
             return [
-                TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
-                TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
-                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
+                TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
+                TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
+                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final SL1 Information',
             ];
         }
         return [];
@@ -1037,8 +1069,8 @@ class TicketResource extends Resource implements HasShieldPermissions
             TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
             TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
             TicketStatus::CLOSED->value => 'Closed',
-            TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'Hight Technical Support Pending',
-            TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'Technical Support Pending',
+            TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'SL2 Pending',
+            TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'SL1 Pending',
             TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
         ];
     }
@@ -1047,8 +1079,8 @@ class TicketResource extends Resource implements HasShieldPermissions
     {
         return [
             TicketHandler::CUSTOMER->value => 'Customer',
-            TicketHandler::TECHNICAL_SUPPORT->value => 'Technical Support',
-            TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'High Technical support',
+            TicketHandler::TECHNICAL_SUPPORT->value => 'SL1',
+            TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'SL2',
         ];
     }
 

@@ -56,7 +56,7 @@ class EditTicket extends EditRecord
                 })
                 ->form([
                     Select::make('user_id')
-                        ->label('High Technical Support User')
+                        ->label('SL2 User')
                         ->options(function ($record) {
                             return Self::getHighTechnicalSupportUsers($record);
                         })
@@ -70,6 +70,7 @@ class EditTicket extends EditRecord
                             $record->level_id = Level::where('code', 2)->first()->id;
                             $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
                             $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                            $record->escalated_at = now();
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
                                 'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
@@ -145,7 +146,7 @@ class EditTicket extends EditRecord
                 })
                 ->form([
                     Select::make('user_id')
-                        ->label('Technical Support User')
+                        ->label('SL1 User')
                         ->options(function ($record) {
                             return Self::getTechnicalSupportUsers($record);
                         })
@@ -250,7 +251,7 @@ class EditTicket extends EditRecord
                     ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
-                            ->label('Technical Support User')
+                            ->label('SL1 User')
                             ->options(function ($record) {
                                 return Self::getTechnicalSupportUsers($record);
                             })
@@ -262,7 +263,7 @@ class EditTicket extends EditRecord
                                 $record->technicalSupport()->attach($data['user_id']);
                                 $ticketHistory = new TicketHistory([
                                     'ticket_id' => $record->id,
-                                    'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                    'title' => 'SL1: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
                                     'owner' => auth()->user()->email,
                                     'work_order' => $record->work_order,
                                     'sub_work_order' => $record->sub_work_order,
@@ -274,12 +275,12 @@ class EditTicket extends EditRecord
                                 $record->save();
                             });
                             Notification::make()
-                                ->title('Technical support added to this ticket')
+                                ->title('SL1 added to this ticket')
                                 ->success()
                                 ->send();
                         } catch (Exception) {
                             Notification::make()
-                                ->title('Technical Support already add to this ticket')
+                                ->title('SL1 already add to this ticket')
                                 ->warning()
                                 ->send();
                         }
@@ -296,7 +297,7 @@ class EditTicket extends EditRecord
                     ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
-                            ->label('Technical Support User')
+                            ->label('SL1 User')
                             ->options(function ($record) {
                                 return $record->technicalSupport
                                     ->pluck('email', 'id');
@@ -308,7 +309,7 @@ class EditTicket extends EditRecord
                             $record->technicalSupport()->detach($data['user_id']);
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'Technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed from this ticket',
+                                'title' => 'SL1: ' . User::where('id', $data['user_id'])->first()->email . ' removed from this ticket',
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -320,7 +321,7 @@ class EditTicket extends EditRecord
                             $record->save();
                         });
                         Notification::make()
-                            ->title('Technical support removed from this ticket')
+                            ->title('SL1 removed from this ticket')
                             ->success()
                             ->send();
                     }),
@@ -336,7 +337,7 @@ class EditTicket extends EditRecord
                     ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
-                            ->label('High Technical Support User')
+                            ->label('SL2 User')
                             ->options(function ($record) {
                                 return Self::getHighTechnicalSupportUsers($record);
                             })
@@ -348,7 +349,7 @@ class EditTicket extends EditRecord
                                 $record->highTechnicalSupport()->attach($data['user_id']);
                                 $ticketHistory = new TicketHistory([
                                     'ticket_id' => $record->id,
-                                    'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                    'title' => 'SL2: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
                                     'owner' => auth()->user()->email,
                                     'work_order' => $record->work_order,
                                     'sub_work_order' => $record->sub_work_order,
@@ -360,12 +361,12 @@ class EditTicket extends EditRecord
                                 $record->save();
                             });
                             Notification::make()
-                                ->title('High technical support added to this ticket')
+                                ->title('SL2 added to this ticket')
                                 ->success()
                                 ->send();
                         } catch (Exception) {
                             Notification::make()
-                                ->title('High technical support already add to this ticket')
+                                ->title('SL2 already add to this ticket')
                                 ->warning()
                                 ->send();
                         }
@@ -382,7 +383,7 @@ class EditTicket extends EditRecord
                     ->requiresConfirmation()
                     ->form([
                         Select::make('user_id')
-                            ->label('High Technical Support User')
+                            ->label('SL2 User')
                             ->options(function ($record) {
                                 return $record->highTechnicalSupport
                                     ->pluck('email', 'id');
@@ -394,7 +395,7 @@ class EditTicket extends EditRecord
                             $record->highTechnicalSupport()->detach($data['user_id']);
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'High technical support: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
+                                'title' => 'SL2: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -406,7 +407,7 @@ class EditTicket extends EditRecord
                             $record->save();
                         });
                         Notification::make()
-                            ->title('High technical support removed from this ticket')
+                            ->title('SL2 removed from this ticket')
                             ->success()
                             ->send();
                     }),
@@ -532,9 +533,9 @@ class EditTicket extends EditRecord
                                             TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
                                         ],
                                         TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => [
-                                            TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'Technical Support Information Required',
-                                            TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround Technical Support Information',
-                                            TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Technical Support Information',
+                                            TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
+                                            TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
+                                            TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final SL1 Information',
                                         ],
                                         default => [],
                                     };
@@ -608,12 +609,12 @@ class EditTicket extends EditRecord
         if (auth()->user()->can('view_all_create_order_type_ticket')) {
             if ($record->level_id == Level::where('code', 2)->first()->id) {
                 return [
-                    'Technical Support' => [
-                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
+                    'SL1' => [
+                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
                         TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                        TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'Technical Support Response',
-                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by Technical Support',
-                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by Technical Support',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
                     ],
                     'Customer' => [
                         TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
@@ -647,8 +648,8 @@ class EditTicket extends EditRecord
         }
         if ($record->level_id == Level::where('code', 2)->first()->id && auth()->user()->can('view_high_technical_support_create_order_type_ticket')) {
             return [
-                'Technical Support' => [
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to Technical Support',
+                'SL1' => [
+                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
                     TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
                 ],
             ];
