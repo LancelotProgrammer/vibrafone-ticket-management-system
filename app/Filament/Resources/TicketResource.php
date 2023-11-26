@@ -395,7 +395,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 $record->ticketHistory()->save($ticketHistory);
                                 $record->save();
                                 Notification::make()
-                                    ->title('Ticket has been canceled')
+                                    ->title('Ticket has been activated')
                                     ->success()
                                     ->send();
                             });
