@@ -11,9 +11,11 @@ class TicketTypeCountChart extends ChartWidget
 {
     protected int | string | array $columnSpan = 'half';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 1;
 
     protected static ?string $pollingInterval = null;
+
+    protected static ?string $maxHeight = '300px';
 
     protected static ?string $heading = 'Ticket Chart';
 

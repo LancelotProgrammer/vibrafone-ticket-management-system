@@ -3,6 +3,7 @@
 namespace App\Filament\Resources\TicketResource\Pages;
 
 use App\Filament\Resources\TicketResource;
+use Filament\Actions\EditAction;
 use Filament\Resources\Pages\ViewRecord;
 
 class ViewTicket extends ViewRecord
@@ -11,6 +12,9 @@ class ViewTicket extends ViewRecord
 
     protected function getHeaderActions(): array
     {
-        return [];
+        return [
+            EditAction::make()
+                ->label('Access'),
+        ];
     }
 }

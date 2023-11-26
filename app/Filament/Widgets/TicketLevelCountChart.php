@@ -14,6 +14,8 @@ class TicketLevelCountChart extends ChartWidget
 
     protected static ?string $pollingInterval = null;
 
+    protected static ?string $maxHeight = '300px';
+
     protected static ?string $heading = 'Ticket Level Chart';
 
     protected function getData(): array
@@ -27,7 +29,7 @@ class TicketLevelCountChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Ticket Chart',
+                    'label' => 'Ticket Level Chart',
                     'data' => array_values($tickets),
                     'backgroundColor' => [
                         'rgb(54, 162, 235)',

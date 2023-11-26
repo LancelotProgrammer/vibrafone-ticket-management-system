@@ -11,7 +11,7 @@ class LatestContactsTable extends BaseWidget
 {
     protected int | string | array $columnSpan = 'half';
 
-    protected static ?int $sort = 2;
+    protected static ?int $sort = 7;
 
     protected static ?string $pollingInterval = null;
 
@@ -21,6 +21,7 @@ class LatestContactsTable extends BaseWidget
             ->query(
                 Contact::query()->where('read_at', null)->orderBy('created_at', 'DESC')
             )
+            ->paginated([5])
             ->columns([
                 Tables\Columns\TextColumn::make('name'),
                 Tables\Columns\TextColumn::make('email'),

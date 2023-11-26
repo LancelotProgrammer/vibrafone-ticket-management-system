@@ -10,9 +10,11 @@ class TicketDepartmentCountChart extends ChartWidget
 {
     protected int | string | array $columnSpan = 'half';
 
-    protected static ?int $sort = 3;
+    protected static ?int $sort = 4;
 
     protected static ?string $pollingInterval = null;
+
+    protected static ?string $maxHeight = '300px';
 
     protected static ?string $heading = 'Ticket Department Chart';
 
@@ -27,7 +29,7 @@ class TicketDepartmentCountChart extends ChartWidget
         return [
             'datasets' => [
                 [
-                    'label' => 'Ticket Chart',
+                    'label' => 'Ticket Department Chart',
                     'data' => array_values($tickets),
                     'backgroundColor' => [
                         'rgb(54, 162, 235)',

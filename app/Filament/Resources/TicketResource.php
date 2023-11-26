@@ -481,7 +481,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     ->send();
                             }
                         }),
-                ]),
+                ])
+                ->button()
+                ->label('Actions'),
             ])
             ->bulkActions([
                 ExportBulkAction::make()
