@@ -808,12 +808,14 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->disabled(true)
                                 ->dehydrated(true),
                             Forms\Components\Select::make('technical_support')
+                                ->label('SL1')
                                 ->hidden(!(auth()->user()->can('view_technical_supports_ticket')))
                                 ->multiple()
                                 ->relationship('technicalSupport', 'email')
                                 ->disabled(true)
                                 ->dehydrated(true),
                             Forms\Components\Select::make('high_technical_support')
+                                ->label('SL2')
                                 ->hidden(!(auth()->user()->can('view_high_technical_supports_ticket')))
                                 ->multiple()
                                 ->relationship('highTechnicalSupport', 'email')
@@ -937,10 +939,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->multiple()
                                 ->relationship('customer', 'email'),
                             Forms\Components\Select::make('technical_support')
+                                ->label('SL1')
                                 ->hidden(!(auth()->user()->can('view_technical_supports_ticket')))
                                 ->multiple()
                                 ->relationship('technicalSupport', 'email'),
                             Forms\Components\Select::make('high_technical_support')
+                                ->label('SL2')
                                 ->hidden(!(auth()->user()->can('view_high_technical_supports_ticket')))
                                 ->multiple()
                                 ->relationship('highTechnicalSupport', 'email'),

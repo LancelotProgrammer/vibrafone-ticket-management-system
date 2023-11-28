@@ -240,6 +240,7 @@ class EditTicket extends EditRecord
             //NOTE: manage user_ticket
             ActionGroup::make([
                 Actions\Action::make('add_technical_support')
+                    ->label('Add SL1')
                     ->hidden(!(auth()->user()->can('add_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (TicketResource::isTicketEnabled($record)) {
@@ -286,6 +287,7 @@ class EditTicket extends EditRecord
                         }
                     }),
                 Actions\Action::make('remove_technical_support')
+                    ->label('Remove SL1')
                     ->hidden(!(auth()->user()->can('remove_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (TicketResource::isTicketEnabled($record)) {
@@ -326,6 +328,7 @@ class EditTicket extends EditRecord
                             ->send();
                     }),
                 Actions\Action::make('add_high_technical_support')
+                    ->label('Add SL2')
                     ->hidden(!(auth()->user()->can('add_high_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (TicketResource::isTicketEnabled($record)) {
@@ -372,6 +375,7 @@ class EditTicket extends EditRecord
                         }
                     }),
                 Actions\Action::make('remove_high_technical_support')
+                    ->label('Remove SL2')
                     ->hidden(!(auth()->user()->can('remove_high_technical_support_ticket')))
                     ->visible(function (Ticket $record) {
                         if (TicketResource::isTicketEnabled($record)) {
