@@ -176,3 +176,10 @@ CREATE TABLE IF NOT EXISTS contacts (
 --     updated_at DATETIME NULL DEFAULT NULL ON UPDATE NOW(),
 --     CONSTRAINT FK_FrequentlyAskedQuestions_FrequentlyAskedQuestionGroups FOREIGN KEY (group_id) REFERENCES frequently_asked_question_groups (id) ON UPDATE CASCADE ON DELETE RESTRICT
 -- );
+
+ALTER TABLE tickets
+ADD canceled_at TIMESTAMP NULL DEFAULT NULL;
+ALTER TABLE tickets
+ADD escalated_at TIMESTAMP NULL DEFAULT NULL;
+ALTER TABLE ticket_customer
+ADD owner BOOLEAN NULL DEFAULT 0;
