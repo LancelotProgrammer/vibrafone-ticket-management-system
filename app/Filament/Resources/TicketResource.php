@@ -332,6 +332,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                         2 => 'level 1',
                         3 => 'level 2',
                     ]),
+                SelectFilter::make('department_id')
+                    ->label('Department')
+                    ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
+                    ->options(
+                        Department::where('title', '!=', 'default')->pluck('title', 'id')
+                    ),
                 Filter::make('created_at')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
                     ->form([

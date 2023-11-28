@@ -91,6 +91,6 @@ class TicketAssignedToCurrentUserTable extends BaseWidget
 
     public static function canView(): bool
     {
-        return auth()->user()->can('widget_LatestContactsTable');
+        return auth()->user()->can('widget_TicketAssignedToCurrentUserTable');
     }
 }
