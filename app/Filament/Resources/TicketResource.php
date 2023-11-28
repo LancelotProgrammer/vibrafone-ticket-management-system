@@ -312,18 +312,18 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->options([
                         TicketHandler::CUSTOMER->value => 'Customer',
                         TicketHandler::TECHNICAL_SUPPORT->value => 'SL1',
-                        TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'High SL1',
+                        TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'SL2',
                     ]),
                 SelectFilter::make('status')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
                     ->options([
                         TicketStatus::IN_PROGRESS->value => 'In Progress',
                         TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
-                        TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
+                        TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Customer Under Monitoring',
                         TicketStatus::CLOSED->value => 'Closed',
-                        TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'High SL1 Pending',
+                        TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'SL2 Pending',
                         TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'SL1 Pending',
-                        TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
+                        TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'SL1 Under Monitoring',
                     ]),
                 SelectFilter::make('level_id')
                     ->label('Level')
