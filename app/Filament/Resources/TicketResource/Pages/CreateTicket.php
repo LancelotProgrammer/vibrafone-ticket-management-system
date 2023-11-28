@@ -44,7 +44,6 @@ class CreateTicket extends CreateRecord
 
             $ticketHistory = new TicketHistory([
                 'title' => 'Ticket has been created',
-                'body' => null,
                 'owner' => auth()->user()->email,
                 'work_order' => null,
                 'sub_work_order' => null,

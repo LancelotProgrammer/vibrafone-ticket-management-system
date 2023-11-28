@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\TicketResource\RelationManagers;
 
+use App\Enums\TicketSubWorkOrder;
 use App\Enums\TicketWorkOrder;
 use App\Filament\Resources\TicketResource;
 use Filament\Forms;
@@ -63,12 +64,19 @@ class TicketHistoryRelationManager extends RelationManager
             })
             ->recordTitleAttribute('title')
             ->columns([
-                Tables\Columns\TextColumn::make('title')->toggleable()->limit(100)->searchable(),
+                Tables\Columns\TextColumn::make('title')->toggleable()->limit(100)->searchable()
+                    ->formatStateUsing(function ($state) {
+                        return str_replace('Technical Support', 'SL1', $state);
+                    }),
                 Tables\Columns\TextColumn::make('body')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('work_order')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('sub_work_order')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('status')->toggleable(isToggledHiddenByDefault: true),
-                Tables\Columns\TextColumn::make('handler')->toggleable(isToggledHiddenByDefault: true),
+                Tables\Columns\TextColumn::make('work_order')->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(function ($state) {
+                        return str_replace('Technical Support', 'SL1', $state);
+                    }),
+                Tables\Columns\TextColumn::make('sub_work_order')->toggleable(isToggledHiddenByDefault: true)
+                    ->formatStateUsing(function ($state) {
+                        return str_replace('Technical Support', 'SL1', $state);
+                    }),
                 Tables\Columns\TextColumn::make('owner')->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->toggleable(),
             ])
