@@ -215,7 +215,7 @@ class EditTicket extends EditRecord
                 }),
 
             //NOTE: create work order type
-            Actions\Action::make('create_work_order_type')
+            Actions\Action::make('create_work_order')
                 ->hidden(!(auth()->user()->can('create_work_order_type_ticket')))
                 ->visible(function (Ticket $record) {
                     if (TicketResource::isTicketEnabled($record)) {
