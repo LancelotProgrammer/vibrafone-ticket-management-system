@@ -42,8 +42,9 @@ class EditTicket extends EditRecord
         return [
 
             //NOTE: manage escalate_ticket
-            Actions\Action::make('escalate_ticket')
-                ->hidden(!(auth()->user()->can('can_escalate_ticket')))
+            Actions\Action::make('escalate_ticket_to_high_technical_support')
+                ->label('Escalate to SL2')
+                ->hidden(!(auth()->user()->can('can_escalate_to_high_technical_support_ticket')))
                 ->visible(function (Ticket $record) {
                     if (TicketResource::isTicketEnabled($record)) {
                         if ($record->technicalSupport->count() <= 0) {
@@ -70,7 +71,7 @@ class EditTicket extends EditRecord
                             $record->level_id = Level::where('code', 2)->first()->id;
                             $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
                             $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
-                            $record->escalated_at = now();
+                            $record->escalated_to_high_technical_support_at = now();
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
                                 'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
@@ -134,6 +135,100 @@ class EditTicket extends EditRecord
                     }
                 }),
 
+            //NOTE: manage escalate_ticket
+            Actions\Action::make('escalate_ticket_to_external_technical_support')
+                ->label('Escalate to SL3')
+                ->hidden(!(auth()->user()->can('can_escalate_to_external_technical_support_ticket')))
+                ->visible(function (Ticket $record) {
+                    if (TicketResource::isTicketEnabled($record)) {
+                        if ($record->highTechnicalSupport->count() <= 0) {
+                            return false;
+                        }
+                        return $record->externalTechnicalSupport->count() <= 0;
+                    } else {
+                        return false;
+                    }
+                })
+                ->form([
+                    Select::make('user_id')
+                        ->label('SL3 User')
+                        ->options(function ($record) {
+                            return Self::getExternalTechnicalSupportUsers($record);
+                        })
+                        ->required(),
+                ])
+                ->action(function (array $data, Ticket $record): void {
+                    try {
+                        DB::transaction(function () use ($data, $record) {
+
+                            $record->externalTechnicalSupport()->attach($data['user_id']);
+                            $record->level_id = Level::where('code', 3)->first()->id;
+                            $record->status = TicketStatus::EXTERNAL_TECHNICAL_SUPPORT_PENDING->value;
+                            $record->handler = TicketHandler::EXTERNAL_TECHNICAL_SUPPORT->value;
+                            $record->escalated_to_external_technical_support_at = now();
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Ticket has been escalated to SL2: '  . User::where('id', $data['user_id'])->first()->email,
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
+
+                            $title = 'Case Escalation:' . ' Case ' . ' # ' . $this->record->ticket_identifier . ' - ' . $this->record->title;
+
+                            $emails = [];
+                            $managers = User::whereHas('roles', function ($query) {
+                                $query->where('name', 'manager');
+                            })->pluck('email')->toArray();
+                            $emails = array_merge($emails, $managers);
+                            $highSupport = User::where('department_id', $this->record->department_id)->where('level_id', 3)->pluck('email')->toArray();
+                            $emails = array_merge($emails, $highSupport);
+                            $externalSupport = User::where('department_id', $this->record->department_id)->where('level_id', 3)->pluck('email')->toArray();
+                            $emails = array_merge($emails, $externalSupport);
+
+                            $externalSupportManager = User::whereHas('roles', function ($query) {
+                                $query->where('name', 'external_support_manager');
+                            })->first();
+
+                            if (is_null($externalSupportManager)) {
+                                throw new ControlPanelDomainException('There is no external support manager');
+                            }
+
+                            Mail::to($externalSupportManager->email)->send(new TicketEscalation($title, $emails));
+
+                            $this->refreshFormData([
+                                'external_technical_support_user_id',
+                            ]);
+                        });
+                        Notification::make()
+                            ->title('Ticket has been escalated')
+                            ->success()
+                            ->send();
+                    } catch (ControlPanelDomainException $e) {
+                        Notification::make()
+                            ->title($e->getMessage())
+                            ->warning()
+                            ->send();
+                    } catch (Exception $e) {
+                        if (App::environment('local')) {
+                            Notification::make()
+                                ->title($e->getMessage())
+                                ->danger()
+                                ->send();
+                        } else {
+                            Notification::make()
+                                ->title('Something went wrong')
+                                ->danger()
+                                ->send();
+                        }
+                    }
+                }),
+
             //NOTE: assign_ticket
             Actions\Action::make('assign_ticket')
                 ->hidden(!(auth()->user()->can('can_assign_technical_support_ticket')))
@@ -157,7 +252,7 @@ class EditTicket extends EditRecord
                         $record->technicalSupport()->attach($data['user_id']);
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
-                            'title' => 'Ticket has been assigned to: ' . User::where('id', $data['user_id'])->first()->email,
+                            'title' => 'Ticket has been assigned to SL3: ' . User::where('id', $data['user_id'])->first()->email,
                             'owner' => auth()->user()->email,
                             'work_order' => $record->work_order,
                             'sub_work_order' => $record->sub_work_order,
@@ -415,6 +510,94 @@ class EditTicket extends EditRecord
                             ->success()
                             ->send();
                     }),
+                Actions\Action::make('add_external_technical_support')
+                    ->label('Add SL3')
+                    ->hidden(!(auth()->user()->can('add_external_technical_support_ticket')))
+                    ->visible(function (Ticket $record) {
+                        if (TicketResource::isTicketEnabled($record)) {
+                            return $record->externalTechnicalSupport->count() >= 1;
+                        } else {
+                            return false;
+                        }
+                    })
+                    ->requiresConfirmation()
+                    ->form([
+                        Select::make('user_id')
+                            ->label('SL3 User')
+                            ->options(function ($record) {
+                                return Self::getexternalTechnicalSupportUsers($record);
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, Ticket $record): void {
+                        try {
+                            DB::transaction(function () use ($data, $record) {
+                                $record->externalTechnicalSupport()->attach($data['user_id']);
+                                $ticketHistory = new TicketHistory([
+                                    'ticket_id' => $record->id,
+                                    'title' => 'SL3: ' . User::where('id', $data['user_id'])->first()->email . ' added to this ticket',
+                                    'owner' => auth()->user()->email,
+                                    'work_order' => $record->work_order,
+                                    'sub_work_order' => $record->sub_work_order,
+                                    'status' => $record->status,
+                                    'handler' => $record->handler,
+                                    'created_at' => now(),
+                                ]);
+                                $record->ticketHistory()->save($ticketHistory);
+                                $record->save();
+                            });
+                            Notification::make()
+                                ->title('SL3 added to this ticket')
+                                ->success()
+                                ->send();
+                        } catch (Exception) {
+                            Notification::make()
+                                ->title('SL3 already add to this ticket')
+                                ->warning()
+                                ->send();
+                        }
+                    }),
+                Actions\Action::make('remove_external_technical_support')
+                    ->label('Remove SL3')
+                    ->hidden(!(auth()->user()->can('remove_external_technical_support_ticket')))
+                    ->visible(function (Ticket $record) {
+                        if (TicketResource::isTicketEnabled($record)) {
+                            return $record->externalTechnicalSupport->count() >= 2;
+                        } else {
+                            return false;
+                        }
+                    })
+                    ->requiresConfirmation()
+                    ->form([
+                        Select::make('user_id')
+                            ->label('SL3 User')
+                            ->options(function ($record) {
+                                return $record->externalTechnicalSupport
+                                    ->pluck('email', 'id');
+                            })
+                            ->required(),
+                    ])
+                    ->action(function (array $data, Ticket $record): void {
+                        DB::transaction(function () use ($data, $record) {
+                            $record->externalTechnicalSupport()->detach($data['user_id']);
+                            $ticketHistory = new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'SL3: ' . User::where('id', $data['user_id'])->first()->email . ' removed to this ticket',
+                                'owner' => auth()->user()->email,
+                                'work_order' => $record->work_order,
+                                'sub_work_order' => $record->sub_work_order,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]);
+                            $record->ticketHistory()->save($ticketHistory);
+                            $record->save();
+                        });
+                        Notification::make()
+                            ->title('SL3 removed from this ticket')
+                            ->success()
+                            ->send();
+                    }),
             ])
                 ->label('Manage Users')
                 ->icon('heroicon-m-ellipsis-vertical')
@@ -440,6 +623,16 @@ class EditTicket extends EditRecord
             ->where('level_id', '=', 3)
             ->pluck('email', 'id');
         $managers = User::permission('can_be_assigned_as_high_technical_support_ticket')
+            ->pluck('email', 'id');
+        return $users->union($managers);
+    }
+
+    private static function getExternalTechnicalSupportUsers($record): Collection
+    {
+        $users = User::where('department_id', $record->department_id)
+            ->where('level_id', '=', 4)
+            ->pluck('email', 'id');
+        $managers = User::permission('can_be_assigned_as_external_technical_support_ticket')
             ->pluck('email', 'id');
         return $users->union($managers);
     }
@@ -472,7 +665,9 @@ class EditTicket extends EditRecord
                                         $set('to', null);
                                     }
                                     if (
-                                        $state == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value || $state == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value
+                                        $state == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value ||
+                                        $state == TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value ||
+                                        $state == TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value
                                     ) {
                                         $set('title', null);
                                         $set('body', null);
@@ -519,6 +714,7 @@ class EditTicket extends EditRecord
                                     return match ($get('work_order')) {
                                         TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => true,
                                         TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => true,
+                                        TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => true,
                                         default => false,
                                     };
                                 })
@@ -526,6 +722,7 @@ class EditTicket extends EditRecord
                                     return match ($get('work_order')) {
                                         TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => true,
                                         TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => true,
+                                        TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => true,
                                         default => false,
                                     };
                                 })
@@ -540,6 +737,11 @@ class EditTicket extends EditRecord
                                             TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
                                             TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
                                             TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
+                                        ],
+                                        TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => [
+                                            TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL2 Information Required',
+                                            TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL2 Information',
+                                            TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL2 Information',
                                         ],
                                         default => [],
                                     };
@@ -611,31 +813,55 @@ class EditTicket extends EditRecord
     private static function getTicketOrderType($record): array
     {
         if (auth()->user()->can('view_all_create_order_type_ticket')) {
-            if ($record->level_id == Level::where('code', 2)->first()->id) {
+            if ($record->level_id == Level::where('code', 1)->first()->id) {
                 return [
-                    'SL1' => [
-                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                        TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                        TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
-                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
-                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
-                    ],
                     'Customer' => [
                         TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
                         TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
                         TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
                         TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
                     ],
                 ];
-            } else {
+            } elseif ($record->level_id == Level::where('code', 2)->first()->id) {
                 return [
                     'Customer' => [
                         TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
                         TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
                         TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
                         TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                    ],
+                    'SL1' => [
+                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+                    ],
+                ];
+            } elseif ($record->level_id == Level::where('code', 3)->first()->id) {
+                return [
+                    'Customer' => [
+                        TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
+                        TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                    ],
+                    'SL1' => [
+                        TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+                    ],
+                    'SL2' => [
+                        TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
+                        TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
+                        TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value => 'SL2 Response',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
+                        TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
                     ],
                 ];
             }
@@ -654,7 +880,19 @@ class EditTicket extends EditRecord
             return [
                 'SL1' => [
                     TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                ],
+                'SL2' => [
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
+                ],
+            ];
+        }
+        if ($record->level_id == Level::where('code', 3)->first()->id && auth()->user()->can('view_external_technical_support_create_order_type_ticket')) {
+            return [
+                'SL2' => [
+                    TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
+                    TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
                 ],
             ];
         }
@@ -778,6 +1016,64 @@ class EditTicket extends EditRecord
                 $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
                 $status = TicketStatus::TECHNICAL_SUPPORT_PENDING->value;
                 $handler = TicketHandler::TECHNICAL_SUPPORT->value;
+                $record->work_order = $data['work_order'];
+                $record->sub_work_order = null;
+            }
+            if ($data['work_order'] == TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value) {
+                if ($data['sub_work_order'] == TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value) {
+                    $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                    $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                    $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                    $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                    $record->work_order = $data['work_order'];
+                    $record->sub_work_order = $data['sub_work_order'];
+                }
+                if ($data['sub_work_order'] == TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value) {
+                    $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                    $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                    $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                    $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                    $record->work_order = $data['work_order'];
+                    $record->sub_work_order = $data['sub_work_order'];
+                }
+                if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value) {
+                    $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                    $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                    $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_UNDER_MONITORING->value;
+                    $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                    $record->work_order = $data['work_order'];
+                    $record->sub_work_order = $data['sub_work_order'];
+                }
+            }
+            if ($data['work_order'] == TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value) {
+                $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $record->work_order = $data['work_order'];
+                $record->sub_work_order = null;
+            }
+            if ($data['work_order'] == TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value) {
+                $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $record->work_order = $data['work_order'];
+                $record->sub_work_order = null;
+            }
+            if ($data['work_order'] == TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value) {
+                $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $record->work_order = $data['work_order'];
+                $record->sub_work_order = null;
+            }
+            if ($data['work_order'] == TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value) {
+                $record->status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $record->handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
+                $status = TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value;
+                $handler = TicketHandler::HIGH_TECHNICAL_SUPPORT->value;
                 $record->work_order = $data['work_order'];
                 $record->sub_work_order = null;
             }

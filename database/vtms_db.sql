@@ -176,10 +176,20 @@ CREATE TABLE IF NOT EXISTS contacts (
 --     updated_at DATETIME NULL DEFAULT NULL ON UPDATE NOW(),
 --     CONSTRAINT FK_FrequentlyAskedQuestions_FrequentlyAskedQuestionGroups FOREIGN KEY (group_id) REFERENCES frequently_asked_question_groups (id) ON UPDATE CASCADE ON DELETE RESTRICT
 -- );
-
 ALTER TABLE tickets
 ADD canceled_at TIMESTAMP NULL DEFAULT NULL;
 ALTER TABLE tickets
 ADD escalated_at TIMESTAMP NULL DEFAULT NULL;
 ALTER TABLE ticket_customer
 ADD owner BOOLEAN NULL DEFAULT 0;
+CREATE TABLE IF NOT EXISTS ticket_external_technical_support (
+    ticket_id BIGINT UNSIGNED NOT NULL,
+    user_id BIGINT UNSIGNED NOT NULL,
+    CONSTRAINT FK_TicketExternalTechnicalSupport_Tickets FOREIGN KEY (ticket_id) REFERENCES tickets (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT FK_TicketExternalTechnicalSupport_Users FOREIGN KEY (user_id) REFERENCES users (id) ON UPDATE CASCADE ON DELETE CASCADE,
+    CONSTRAINT UQ_TicketTechnicalSupport_TicketId_UserId UNIQUE (ticket_id, user_id)
+);
+ALTER TABLE tickets
+    RENAME COLUMN escalated_at TO escalated_to_high_technical_support_at;
+ALTER TABLE tickets
+ADD escalated_to_external_technical_support_at TIMESTAMP NULL DEFAULT NULL;

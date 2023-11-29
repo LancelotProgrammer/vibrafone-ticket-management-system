@@ -75,16 +75,19 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_handler',
             'view_status',
             'view_created_at',
-            'view_escalated_at',
+            'view_escalated_to_high_technical_support_at',
+            'view_escalated_to_external_technical_support_at',
             'view_start_at',
             'view_end_at',
             'view_archived_at',
             'view_customers',
             'view_technical_supports',
             'view_high_technical_supports',
+            'view_external_technical_supports',
             'view_all_order_type', // NOTE: this permission make the user ignores {view_customer_order_type / view_high_technical_support_order_type}
             'view_customer_order_type',
             'view_high_technical_support_order_type',
+            'view_external_technical_support_order_type',
 
             'can_filter_table',
             'can_not_self_assign', // NOTE: this permission is only for users who are not managers
@@ -96,19 +99,24 @@ class TicketResource extends Resource implements HasShieldPermissions
             'remove_technical_support', // NOTE: this permission is only managers
             'add_high_technical_support', // NOTE: this permission is only managers
             'remove_high_technical_support', // NOTE: this permission is only managers
+            'add_external_technical_support', // NOTE: this permission is only managers
+            'remove_external_technical_support', // NOTE: this permission is only managers
 
-            'can_escalate',
+            'can_escalate_to_high_technical_support',
+            'can_escalate_to_external_technical_support',
             'can_cancel',
             'can_activate',
             'can_assign_technical_support',
             'can_be_assigned_as_technical_support',
             'can_be_assigned_as_high_technical_support',
+            'can_be_assigned_as_external_technical_support',
 
             'create_work_order_type',
             // NOTE: all permissions below needs the {create_work_order_type} permission to be enabled
             'view_all_create_order_type', // this permission make the user ignores {view_customer_create_order_type / view_high_technical_support_create_order_type}
             'view_customer_create_order_type',
             'view_high_technical_support_create_order_type',
+            'view_external_technical_support_create_order_type',
             'send_email_in_order_type',
 
             'view_history',
@@ -117,12 +125,14 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_high_technical_support_order_type}
             'view_history_customer_order_type',
             'view_history_high_technical_support_order_type',
+            'view_history_external_technical_support_order_type',
 
             'view_archived_count',
             'view_canceled_count',
             'view_closed_count',
             'view_owned_count',
-            'view_escalated_count',
+            'view_escalated_to_high_technical_support_count',
+            'view_escalated_to_external_technical_support_count',
             'view_opened_count',
             'view_total_count',
         ];
@@ -155,7 +165,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     return $query
                         ->orderByDesc('id', 'des');
                 }
-                if (auth()->user()->level_id == 1 || auth()->user()->level_id == 2 || auth()->user()->level_id == 3) {
+                if (auth()->user()->level_id == 1 || auth()->user()->level_id == 2 || auth()->user()->level_id == 3 || auth()->user()->level_id == 4) {
                     if (auth()->user()->can('can_ignore_level_when_view_ticket')) {
                         if (auth()->user()->can('can_ignore_department_when_view_ticket')) {
                             // NOTE: this is for managers
@@ -211,6 +221,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                         Tables\Columns\TextColumn::make('highTechnicalSupport.email')
                             ->icon('heroicon-m-user-plus')
                             ->hidden(!(auth()->user()->can('view_high_technical_supports_ticket'))),
+                        Tables\Columns\TextColumn::make('externalTechnicalSupport.email')
+                            ->icon('heroicon-m-users')
+                            ->hidden(!(auth()->user()->can('view_external_technical_supports_ticket'))),
                     ]),
                     Stack::make([
                         Tables\Columns\TextColumn::make('created_at')
@@ -220,13 +233,20 @@ class TicketResource extends Resource implements HasShieldPermissions
                             ->badge()
                             ->color('gray')
                             ->hidden(!(auth()->user()->can('view_created_at_ticket'))),
-                        Tables\Columns\TextColumn::make('escalated_at')
+                        Tables\Columns\TextColumn::make('escalated_to_high_technical_support_at')
                             ->formatStateUsing(function ($state) {
-                                return 'Escalated At: ' . $state;
+                                return 'Escalated To SL2 At: ' . $state;
                             })
                             ->badge()
                             ->color('gray')
-                            ->hidden(!(auth()->user()->can('view_escalated_at_ticket'))),
+                            ->hidden(!(auth()->user()->can('view_escalated_to_high_technical_support_at_ticket'))),
+                        Tables\Columns\TextColumn::make('escalated_to_external_technical_support_at')
+                            ->formatStateUsing(function ($state) {
+                                return 'Escalated To SL3 At: ' . $state;
+                            })
+                            ->badge()
+                            ->color('gray')
+                            ->hidden(!(auth()->user()->can('view_escalated_to_external_technical_support_at_ticket'))),
                         Tables\Columns\TextColumn::make('start_at')
                             ->formatStateUsing(function ($state) {
                                 return 'Started At: ' . $state;
@@ -331,6 +351,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->options([
                         2 => 'level 1',
                         3 => 'level 2',
+                        4 => 'level 3',
                     ]),
                 SelectFilter::make('department_id')
                     ->label('Department')
@@ -451,7 +472,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 if (
                                     $record->customer->contains(auth()->user()->id) ||
                                     $record->technicalSupport->contains(auth()->user()->id) ||
-                                    $record->HighTechnicalSupport->contains(auth()->user()->id)
+                                    $record->HighTechnicalSupport->contains(auth()->user()->id) ||
+                                    $record->externalTechnicalSupport->contains(auth()->user()->id)
                                 ) {
                                     return false;
                                 } else {
@@ -472,6 +494,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     }
                                     if (auth()->user()->level_id == 3) {
                                         $record->HighTechnicalSupport()->attach(auth()->user()->id);
+                                    }
+                                    if (auth()->user()->level_id == 4) {
+                                        $record->externalTechnicalSupport()->attach(auth()->user()->id);
                                     }
                                     $ticketHistory = new TicketHistory([
                                         'ticket_id' => $record->id,
@@ -648,13 +673,22 @@ class TicketResource extends Resource implements HasShieldPermissions
                 ->label('Canceled At')
                 ->disabled(true)
                 ->dehydrated(true),
-            Forms\Components\TextInput::make('escalated_at')
-                ->hidden(!(auth()->user()->can('view_escalated_at_ticket')))
+            Forms\Components\TextInput::make('escalated_to_high_technical_support_at')
+                ->hidden(!(auth()->user()->can('view_escalated_to_high_technical_support_at_ticket')))
                 ->visible(function ($record) {
-                    return !is_null($record->escalated_at);
+                    return !is_null($record->escalated_to_high_technical_support_at);
                 })
                 ->columnSpan(3)
-                ->label('Escalated At')
+                ->label('Escalated To SL2 At')
+                ->disabled(true)
+                ->dehydrated(true),
+            Forms\Components\TextInput::make('escalated_to_external_technical_support_at')
+                ->hidden(!(auth()->user()->can('view_escalated_to_external_technical_support_at_ticket')))
+                ->visible(function ($record) {
+                    return !is_null($record->escalated_to_external_technical_support_at);
+                })
+                ->columnSpan(3)
+                ->label('Escalated To SL3 At')
                 ->disabled(true)
                 ->dehydrated(true),
             Forms\Components\Section::make('Ticket Info')
@@ -821,6 +855,13 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->relationship('highTechnicalSupport', 'email')
                                 ->disabled(true)
                                 ->dehydrated(true),
+                            Forms\Components\Select::make('external_technical_support')
+                                ->label('SL3')
+                                ->hidden(!(auth()->user()->can('view_external_technical_supports_ticket')))
+                                ->multiple()
+                                ->relationship('externalTechnicalSupport', 'email')
+                                ->disabled(true)
+                                ->dehydrated(true),
                         ])
                         ->columnSpan(1)
                         ->columns(1),
@@ -846,13 +887,20 @@ class TicketResource extends Resource implements HasShieldPermissions
                 })
                 ->columnSpan(3)
                 ->label('Canceled At'),
-            Forms\Components\TextInput::make('escalated_at')
-                ->hidden(!(auth()->user()->can('view_escalated_at_ticket')))
+            Forms\Components\TextInput::make('escalated_to_high_technical_support_at')
+                ->hidden(!(auth()->user()->can('view_escalated_to_high_technical_support_at_ticket')))
                 ->visible(function ($record) {
-                    return !is_null($record->escalated_at);
+                    return !is_null($record->escalated_to_high_technical_support_at);
                 })
                 ->columnSpan(3)
-                ->label('Escalated At'),
+                ->label('Escalated To SL2 At'),
+            Forms\Components\TextInput::make('escalated_to_external_technical_support_at')
+                ->hidden(!(auth()->user()->can('view_escalated_to_external_technical_support_at_ticket')))
+                ->visible(function ($record) {
+                    return !is_null($record->escalated_to_external_technical_support_at);
+                })
+                ->columnSpan(3)
+                ->label('Escalated To SL3 At'),
             Forms\Components\Section::make('Ticket Info')
                 ->schema([
                     Forms\Components\Section::make('Ticket Data')
@@ -947,7 +995,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->label('SL2')
                                 ->hidden(!(auth()->user()->can('view_high_technical_supports_ticket')))
                                 ->multiple()
-                                ->relationship('highTechnicalSupport', 'email'),
+                                ->relationship('externalTechnicalSupport', 'email'),
+                            Forms\Components\Select::make('external_technical_support')
+                                ->label('SL2')
+                                ->hidden(!(auth()->user()->can('view_external_technical_supports_ticket')))
+                                ->multiple()
+                                ->relationship('externalTechnicalSupport', 'email'),
                         ])
                         ->columnSpan(1)
                         ->columns(1),
@@ -978,7 +1031,8 @@ class TicketResource extends Resource implements HasShieldPermissions
         } else {
             if (
                 $record->technicalSupport->count() > 0 ||
-                $record->highTechnicalSupport->count() > 0
+                $record->highTechnicalSupport->count() > 0 ||
+                $record->externalTechnicalSupport->count() > 0
             ) {
                 return true && self::isTicketEnabled($record);
             } else {
@@ -990,26 +1044,47 @@ class TicketResource extends Resource implements HasShieldPermissions
     private static function getTicketOrderType($record): array
     {
         if (auth()->user()->can('view_all_order_type_ticket')) {
-            if ($record->level_id == Level::where('code', 2)->first()->id) {
+            if ($record->level_id == Level::where('code', 1)->first()->id) {
                 return [
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
                     TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
                     TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
                     TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
                     TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
                 ];
-            } else {
+            } elseif ($record->level_id == Level::where('code', 2)->first()->id) {
                 return [
                     TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
                     TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
                     TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
                     TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+
+                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+                ];
+            } elseif ($record->level_id == Level::where('code', 3)->first()->id) {
+                return [
+                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
+                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+
+                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+
+                    TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
+                    TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
+                    TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value => 'SL2 Response',
+                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
+                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
                 ];
             }
             return [];
@@ -1017,7 +1092,7 @@ class TicketResource extends Resource implements HasShieldPermissions
         if (auth()->user()->can('view_customer_order_type_ticket')) {
             return [
                 TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
                 TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
                 TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
@@ -1026,10 +1101,19 @@ class TicketResource extends Resource implements HasShieldPermissions
         if (auth()->user()->can('view_high_technical_support_order_type_ticket')) {
             return [
                 TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'Troubleshooting Activity',
+                TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
                 TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
                 TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+            ];
+        }
+        if (auth()->user()->can('view_external_technical_support_order_type_ticket')) {
+            return [
+                TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
+                TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
+                TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value => 'SL2 Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
             ];
         }
         return [];
@@ -1038,20 +1122,35 @@ class TicketResource extends Resource implements HasShieldPermissions
     private static function getTicketSubOrderType($record): array
     {
         if (auth()->user()->can('view_all_order_type_ticket')) {
-            if ($record->level_id == Level::where('code', 2)->first()->id) {
+            if ($record->level_id == Level::where('code', 1)->first()->id) {
                 return [
                     TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
                     TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
                     TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+                ];
+            } elseif ($record->level_id == Level::where('code', 2)->first()->id) {
+                return [
+                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
+                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
+                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+
                     TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
                     TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
-                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final SL1 Information',
+                    TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
                 ];
-            } else {
+            } elseif ($record->level_id == Level::where('code', 3)->first()->id) {
                 return [
                     TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
                     TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
                     TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+
+                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
+                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
+                    TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
+
+                    TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL2 Information Required',
+                    TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL2 Information',
+                    TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL2 Information',
                 ];
             }
             return [];
@@ -1063,11 +1162,18 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
             ];
         }
-        if (auth()->user()->can('view_support_order_type_ticket')) {
+        if (auth()->user()->can('view_high_technical_support_order_type_ticket')) {
             return [
                 TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
                 TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
                 TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
+            ];
+        }
+        if (auth()->user()->can('view_external_technical_support_order_type_ticket')) {
+            return [
+                TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL2 Information Required',
+                TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL2 Information',
+                TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL2 Information',
             ];
         }
         return [];
@@ -1077,12 +1183,15 @@ class TicketResource extends Resource implements HasShieldPermissions
     {
         return [
             TicketStatus::IN_PROGRESS->value => 'In Progress',
-            TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
-            TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Under Monitoring',
             TicketStatus::CLOSED->value => 'Closed',
-            TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'SL2 Pending',
+            TicketStatus::CUSTOMER_PENDING->value => 'Customer Pending',
+            TicketStatus::CUSTOMER_UNDER_MONITORING->value => 'Customer Under Monitoring',
             TicketStatus::TECHNICAL_SUPPORT_PENDING->value => 'SL1 Pending',
-            TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'Under Monitoring',
+            TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'SL1 Under Monitoring',
+            TicketStatus::HIGH_TECHNICAL_SUPPORT_PENDING->value => 'SL2 Pending',
+            TicketStatus::HIGH_TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'SL2 Under Monitoring',
+            TicketStatus::EXTERNAL_TECHNICAL_SUPPORT_PENDING->value => 'SL3 Pending',
+            TicketStatus::EXTERNAL_TECHNICAL_SUPPORT_UNDER_MONITORING->value => 'SL3 Under Monitoring',
         ];
     }
 
@@ -1092,6 +1201,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             TicketHandler::CUSTOMER->value => 'Customer',
             TicketHandler::TECHNICAL_SUPPORT->value => 'SL1',
             TicketHandler::HIGH_TECHNICAL_SUPPORT->value => 'SL2',
+            TicketHandler::EXTERNAL_TECHNICAL_SUPPORT->value => 'SL3',
         ];
     }
 
@@ -1100,9 +1210,10 @@ class TicketResource extends Resource implements HasShieldPermissions
         // NOTE: enter ticket only if ticket is enabled and assigned or has {can_access_any_ticket} permission
         if (TicketResource::isTicketEnabled($record)) {
             if (
+                $record->customer->contains(auth()->user()->id) ||
                 $record->technicalSupport->contains(auth()->user()->id) ||
                 $record->highTechnicalSupport->contains(auth()->user()->id) ||
-                $record->customer->contains(auth()->user()->id)
+                $record->externalTechnicalSupport->contains(auth()->user()->id)
             ) {
                 return true;
             }
@@ -1124,9 +1235,10 @@ class TicketResource extends Resource implements HasShieldPermissions
         }
         if (TicketResource::isTicketEnabled($record)) {
             if (
+                $record->customer->contains(auth()->user()->id) ||
                 $record->technicalSupport->contains(auth()->user()->id) ||
                 $record->highTechnicalSupport->contains(auth()->user()->id) ||
-                $record->customer->contains(auth()->user()->id)
+                $record->externalTechnicalSupport->contains(auth()->user()->id)
             ) {
                 return true;
             } else {

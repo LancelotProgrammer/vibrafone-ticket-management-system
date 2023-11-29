@@ -243,7 +243,7 @@ it('can escalate', function () use ($newDataForEdit) {
         'record' => $ticket->id,
     ])
         ->callAction(
-            'escalate_ticket',
+            'escalate_ticket_to_high_technical_support',
             [
                 'user_id' => 4,
             ]

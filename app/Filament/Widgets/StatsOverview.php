@@ -30,8 +30,11 @@ class StatsOverview extends BaseWidget
         if (auth()->user()->can('view_owned_count_ticket')) {
             $stat[] = Stat::make('Your Owned Tickets', auth()->user()->customerTickets()->where('owner', true)->count());
         }
-        if (auth()->user()->can('view_escalated_count_ticket')) {
-            $stat[] = Stat::make('Escalated Tickets', Ticket::where('level_id', 3)->count());
+        if (auth()->user()->can('view_escalated_to_high_technical_support_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL2', Ticket::where('level_id', 3)->count());
+        }
+        if (auth()->user()->can('view_escalated_to_external_technical_support_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL3', Ticket::where('level_id', 4)->count());
         }
         if (auth()->user()->can('view_opened_count_ticket')) {
             $stat[] = Stat::make('Opened Tickets', Ticket::whereNotNull('start_at')->count());

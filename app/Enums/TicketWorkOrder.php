@@ -14,4 +14,9 @@ enum TicketWorkOrder: string
     case TECHNICAL_SUPPORT_RESPONSE = 'Technical Support Response';
     case WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT = 'Workaround Accepted by Technical Support';
     case RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT = 'Resolution Accepted by Technical Support';
+    case FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT = 'Feedback to HIGH Technical Support';
+    case HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY = 'HIGH Technical Support Troubleshooting Activity';
+    case HIGH_TECHNICAL_SUPPORT_RESPONSE = 'HIGH Technical Support Response';
+    case WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT = 'Workaround Accepted by HIGH Technical Support';
+    case RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT = 'Resolution Accepted by HIGH Technical Support';
 }

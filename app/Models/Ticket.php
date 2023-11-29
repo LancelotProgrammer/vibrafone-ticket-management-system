@@ -76,6 +76,11 @@ class Ticket extends Model
         return $this->belongsToMany('App\Models\User', 'ticket_high_technical_support', 'ticket_id', 'user_id');
     }
 
+    public function externalTechnicalSupport()
+    {
+        return $this->belongsToMany('App\Models\User', 'ticket_external_technical_support', 'ticket_id', 'user_id');
+    }
+
     public function ticketHistory()
     {
         return $this->hasMany('App\Models\TicketHistory');

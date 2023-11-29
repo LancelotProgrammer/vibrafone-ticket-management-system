@@ -23,7 +23,8 @@ class TicketTypeCountChart extends ChartWidget
         $archivedTickets = Ticket::whereNotNull('deleted_at')->count();
         $canceledTickets = Ticket::whereNotNull('canceled_at')->count();
         $closedTickets = Ticket::where('status', TicketStatus::CLOSED->value)->count();
-        $escalatedTickets = Ticket::whereNotNull('escalated_at')->count();
+        $escalatedToHighTechnicalSupport = Ticket::whereNotNull('escalated_to_high_technical_support_at')->count();
+        $escalatedToExternalTechnicalSupport = Ticket::whereNotNull('escalated_to_external_technical_support_at')->count();
         $openedTickets = Ticket::whereNotNull('start_at')->count();
         return [
             'datasets' => [
@@ -33,7 +34,8 @@ class TicketTypeCountChart extends ChartWidget
                         $archivedTickets,
                         $canceledTickets,
                         $closedTickets,
-                        $escalatedTickets,
+                        $escalatedToHighTechnicalSupport,
+                        $escalatedToExternalTechnicalSupport,
                         $openedTickets,
                     ],
                     'backgroundColor' => [
@@ -41,6 +43,7 @@ class TicketTypeCountChart extends ChartWidget
                         'rgb(255, 99, 132)',
                         'rgb(75, 192, 192)',
                         'rgb(153, 102, 255)',
+                        'rgb(255, 159, 64)',
                         'rgb(54, 162, 235)',
                     ],
                 ],
@@ -49,7 +52,8 @@ class TicketTypeCountChart extends ChartWidget
                 'Archived Tickets',
                 'Canceled Tickets',
                 'Closed Tickets',
-                'Escalated Tickets',
+                'Escalated To SL2',
+                'Escalated To SL3',
                 'Opened Tickets',
             ],
         ];
