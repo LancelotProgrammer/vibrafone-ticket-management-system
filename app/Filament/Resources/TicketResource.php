@@ -997,7 +997,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->multiple()
                                 ->relationship('externalTechnicalSupport', 'email'),
                             Forms\Components\Select::make('external_technical_support')
-                                ->label('SL2')
+                                ->label('SL3')
                                 ->hidden(!(auth()->user()->can('view_external_technical_supports_ticket')))
                                 ->multiple()
                                 ->relationship('externalTechnicalSupport', 'email'),
