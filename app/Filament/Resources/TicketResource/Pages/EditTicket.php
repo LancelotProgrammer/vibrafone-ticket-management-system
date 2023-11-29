@@ -74,7 +74,7 @@ class EditTicket extends EditRecord
                             $record->escalated_to_high_technical_support_at = now();
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'Ticket has been escalated to: '  . User::where('id', $data['user_id'])->first()->email,
+                                'title' => 'Ticket has been escalated to SL2: '  . User::where('id', $data['user_id'])->first()->email,
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -168,7 +168,7 @@ class EditTicket extends EditRecord
                             $record->escalated_to_external_technical_support_at = now();
                             $ticketHistory = new TicketHistory([
                                 'ticket_id' => $record->id,
-                                'title' => 'Ticket has been escalated to SL2: '  . User::where('id', $data['user_id'])->first()->email,
+                                'title' => 'Ticket has been escalated to SL3: '  . User::where('id', $data['user_id'])->first()->email,
                                 'owner' => auth()->user()->email,
                                 'work_order' => $record->work_order,
                                 'sub_work_order' => $record->sub_work_order,
@@ -252,7 +252,7 @@ class EditTicket extends EditRecord
                         $record->technicalSupport()->attach($data['user_id']);
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
-                            'title' => 'Ticket has been assigned to SL3: ' . User::where('id', $data['user_id'])->first()->email,
+                            'title' => 'Ticket has been assigned: ' . User::where('id', $data['user_id'])->first()->email,
                             'owner' => auth()->user()->email,
                             'work_order' => $record->work_order,
                             'sub_work_order' => $record->sub_work_order,
