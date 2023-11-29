@@ -539,7 +539,7 @@ class EditTicket extends EditRecord
                                         TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => [
                                             TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
                                             TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
-                                            TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final SL1 Information',
+                                            TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
                                         ],
                                         default => [],
                                     };
@@ -740,7 +740,7 @@ class EditTicket extends EditRecord
                     $record->work_order = $data['work_order'];
                     $record->sub_work_order = $data['sub_work_order'];
                 }
-                if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value) {
+                if ($data['sub_work_order'] == TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value) {
                     $record->status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;
                     $record->handler = TicketHandler::TECHNICAL_SUPPORT->value;
                     $status = TicketStatus::TECHNICAL_SUPPORT_UNDER_MONITORING->value;

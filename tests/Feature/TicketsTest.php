@@ -175,7 +175,7 @@ it('can create work order type: FEEDBACK_TO_CUSTOMER | CUSTOMER_INFORMATION_REQU
         'record' => $ticket->id,
     ])
         ->callAction(
-            'create_work_order_type',
+            'create_work_order',
             [
                 'work_order' => TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value,
                 'sub_work_order' => TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value,
@@ -267,7 +267,7 @@ it('can create work order type: RESOLUTION_ACCEPTED_BY_CUSTOMER without email or
         'record' => $ticket->id,
     ])
         ->callAction(
-            'create_work_order_type',
+            'create_work_order',
             [
                 'work_order' => TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value,
                 'body' => 'I am test body',
