@@ -52,8 +52,13 @@ class TicketHistoryRelationManager extends RelationManager
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
                         ->orderByDesc('created_at', 'des');
                 }
-                if (auth()->user()->can('view_history_high_technical_support_order_type_ticket')) {
+                if (auth()->user()->can('view_history_technical_support_order_type_ticket')) {
                     return $query->where('ticket_id', $record->id)
+                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
+                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)
+                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)
+                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
                         ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
                         ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
@@ -61,21 +66,44 @@ class TicketHistoryRelationManager extends RelationManager
                         ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
                         ->orderByDesc('created_at', 'des');
                 }
+                if (auth()->user()->can('view_history_high_technical_support_order_type_ticket')) {
+                    return $query->where('ticket_id', $record->id)
+                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
+                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
+                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
+                        ->orderByDesc('created_at', 'des');
+                }
+                if (auth()->user()->can('view_history_external_technical_support_order_type_ticket')) {
+                    return $query->where('ticket_id', $record->id)
+                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
+                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value)
+                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
+                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
+                        ->orderByDesc('created_at', 'des');
+                }
             })
             ->recordTitleAttribute('title')
             ->columns([
-                Tables\Columns\TextColumn::make('title')->toggleable()->limit(100)->searchable()
+                Tables\Columns\TextColumn::make('title')->toggleable()->limit(75)->searchable()
                     ->formatStateUsing(function ($state) {
-                        return str_replace('Technical Support', 'SL1', $state);
+                        return self::formatTitleUsing($state);
                     }),
                 Tables\Columns\TextColumn::make('body')->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('work_order')->toggleable(isToggledHiddenByDefault: true)
                     ->formatStateUsing(function ($state) {
-                        return str_replace('Technical Support', 'SL1', $state);
+                        return self::formatTitleUsing($state);
                     }),
                 Tables\Columns\TextColumn::make('sub_work_order')->toggleable(isToggledHiddenByDefault: true)
                     ->formatStateUsing(function ($state) {
-                        return str_replace('Technical Support', 'SL1', $state);
+                        return self::formatTitleUsing($state);
                     }),
                 Tables\Columns\TextColumn::make('owner')->toggleable(),
                 Tables\Columns\TextColumn::make('created_at')->toggleable(),
@@ -109,6 +137,19 @@ class TicketHistoryRelationManager extends RelationManager
             ->emptyStateActions([
                 //
             ]);
+    }
+
+    public static function formatTitleUsing($state): string
+    {
+        if (strpos($state, 'Technical Support') !== false) {
+            return str_replace('Technical Support', 'SL1', $state);
+        } elseif (strpos($state, 'High Technical Support') !== false) {
+            return str_replace('High Technical Support', 'SL2', $state);
+        } elseif (strpos($state, 'External Technical Support') !== false) {
+            return str_replace('External Technical Support', 'SL3', $state);
+        } else {
+            return $state;
+        }
     }
 
     public static function canViewForRecord(Model $ownerRecord, string $pageClass): bool

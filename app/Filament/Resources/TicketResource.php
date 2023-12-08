@@ -113,7 +113,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             'can_be_assigned_as_external_technical_support',
 
             'create_work_order_type',
-            // NOTE: all permissions below needs the {create_work_order_type} permission to be enabled
+            // NOTE: all permissions below need the {create_work_order_type} permission to be enabled as well as taking into consideration the ticket level
             'view_all_create_order_type', // this permission make the user ignores {view_customer_request_create_order_type / view_customer_response_create_order_type / view_technical_support_request_create_order_type / view_technical_support_response_create_order_type / view_high_technical_support_request_create_order_type / view_high_technical_support_response_create_order_type }
             'view_customer_request_create_order_type',
             'view_customer_response_create_order_type',
@@ -124,10 +124,11 @@ class TicketResource extends Resource implements HasShieldPermissions
             'send_email_in_order_type',
 
             'view_history',
-            // NOTE: all permissions below needs the {view_history} permission to be enabled
+            // NOTE: all permissions below need the {view_history} permission to be enabled
             'edit_history_date',
-            'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_high_technical_support_order_type}
+            'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_technical_support_order_type / view_history_high_technical_support_order_type / view_history_external_technical_support_order_type}
             'view_history_customer_order_type',
+            'view_history_technical_support_order_type',
             'view_history_high_technical_support_order_type',
             'view_history_external_technical_support_order_type',
 
