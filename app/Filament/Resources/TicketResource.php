@@ -84,8 +84,9 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_technical_supports',
             'view_high_technical_supports',
             'view_external_technical_supports',
-            'view_all_order_type', // NOTE: this permission make the user ignores {view_customer_order_type / view_high_technical_support_order_type}
+            'view_all_order_type', // NOTE: this permission make the user ignores {view_customer_order_type / view_technical_support_order_type /  view_high_technical_support_order_type / view_external_technical_support_order_type}
             'view_customer_order_type',
+            'view_technical_support_order_type',
             'view_high_technical_support_order_type',
             'view_external_technical_support_order_type',
 
@@ -113,10 +114,13 @@ class TicketResource extends Resource implements HasShieldPermissions
 
             'create_work_order_type',
             // NOTE: all permissions below needs the {create_work_order_type} permission to be enabled
-            'view_all_create_order_type', // this permission make the user ignores {view_customer_create_order_type / view_high_technical_support_create_order_type}
-            'view_customer_create_order_type',
-            'view_high_technical_support_create_order_type',
-            'view_external_technical_support_create_order_type',
+            'view_all_create_order_type', // this permission make the user ignores {view_customer_request_create_order_type / view_customer_response_create_order_type / view_technical_support_request_create_order_type / view_technical_support_response_create_order_type / view_high_technical_support_request_create_order_type / view_high_technical_support_response_create_order_type }
+            'view_customer_request_create_order_type',
+            'view_customer_response_create_order_type',
+            'view_technical_support_request_create_order_type',
+            'view_technical_support_response_create_order_type',
+            'view_high_technical_support_request_create_order_type',
+            'view_high_technical_support_response_create_order_type',
             'send_email_in_order_type',
 
             'view_history',
@@ -1044,50 +1048,25 @@ class TicketResource extends Resource implements HasShieldPermissions
     private static function getTicketOrderType($record): array
     {
         if (auth()->user()->can('view_all_order_type_ticket')) {
-            if ($record->level_id == Level::where('code', 1)->first()->id) {
-                return [
-                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
-                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
-                ];
-            } elseif ($record->level_id == Level::where('code', 2)->first()->id) {
-                return [
-                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
-                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+            return [
+                TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
+                TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
 
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
-                ];
-            } elseif ($record->level_id == Level::where('code', 3)->first()->id) {
-                return [
-                    TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
-                    TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
-                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
+                TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
 
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
-
-                    TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
-                    TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
-                    TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value => 'SL2 Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
-                ];
-            }
-            return [];
+                TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
+                TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
+                TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value => 'SL2 Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
+            ];
         }
         if (auth()->user()->can('view_customer_order_type_ticket')) {
             return [
@@ -1098,6 +1077,21 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
             ];
         }
+        if (auth()->user()->can('view_technical_support_order_type_ticket')) {
+            return [
+                TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value => 'Feedback to Customer',
+                TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value => 'Customer Troubleshooting Activity',
+                TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
+
+                TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
+                TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
+                TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+            ];
+        }
         if (auth()->user()->can('view_high_technical_support_order_type_ticket')) {
             return [
                 TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
@@ -1105,6 +1099,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value => 'SL1 Response',
                 TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL1',
                 TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL1',
+
+                TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
+                TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
+                TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value => 'SL2 Response',
+                TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
+                TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
             ];
         }
         if (auth()->user()->can('view_external_technical_support_order_type_ticket')) {
@@ -1122,38 +1122,19 @@ class TicketResource extends Resource implements HasShieldPermissions
     private static function getTicketSubOrderType($record): array
     {
         if (auth()->user()->can('view_all_order_type_ticket')) {
-            if ($record->level_id == Level::where('code', 1)->first()->id) {
-                return [
-                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
-                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
-                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
-                ];
-            } elseif ($record->level_id == Level::where('code', 2)->first()->id) {
-                return [
-                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
-                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
-                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+            return [
+                TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
+                TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
+                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
 
-                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
-                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
-                    TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
-                ];
-            } elseif ($record->level_id == Level::where('code', 3)->first()->id) {
-                return [
-                    TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
-                    TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
-                    TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+                TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
+                TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
+                TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
 
-                    TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
-                    TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
-                    TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
-
-                    TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL2 Information Required',
-                    TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL2 Information',
-                    TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL2 Information',
-                ];
-            }
-            return [];
+                TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL2 Information Required',
+                TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL2 Information',
+                TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL2 Information',
+            ];
         }
         if (auth()->user()->can('view_customer_order_type_ticket')) {
             return [
@@ -1162,11 +1143,26 @@ class TicketResource extends Resource implements HasShieldPermissions
                 TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
             ];
         }
+        if (auth()->user()->can('view_technical_support_order_type_ticket')) {
+            return [
+                TicketSubWorkOrder::CUSTOMER_INFORMATION_REQUIRED->value => 'Customer Information Required',
+                TicketSubWorkOrder::WORKAROUND_CUSTOMER_INFORMATION->value => 'Workaround Customer Information',
+                TicketSubWorkOrder::FINAL_CUSTOMER_INFORMATION->value => 'Final Customer Information',
+
+                TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
+                TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
+                TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
+            ];
+        }
         if (auth()->user()->can('view_high_technical_support_order_type_ticket')) {
             return [
                 TicketSubWorkOrder::TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL1 Information Required',
                 TicketSubWorkOrder::WORKAROUND_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL1 Information',
                 TicketSubWorkOrder::FINAL_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL1 Information',
+
+                TicketSubWorkOrder::HIGH_TECHNICAL_SUPPORT_INFORMATION_REQUIRED->value => 'SL2 Information Required',
+                TicketSubWorkOrder::WORKAROUND_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Workaround SL2 Information',
+                TicketSubWorkOrder::FINAL_HIGH_TECHNICAL_SUPPORT_INFORMATION->value => 'Final SL2 Information',
             ];
         }
         if (auth()->user()->can('view_external_technical_support_order_type_ticket')) {

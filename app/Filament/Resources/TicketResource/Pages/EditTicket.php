@@ -663,6 +663,7 @@ class EditTicket extends EditRecord
                                         // $set('from', null);
                                         $set('cc', null);
                                         $set('to', null);
+                                        return;
                                     }
                                     if (
                                         $state == TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value ||
@@ -867,34 +868,67 @@ class EditTicket extends EditRecord
             }
             return [];
         }
-        if (auth()->user()->can('view_customer_create_order_type_ticket')) {
-            return [
-                'Customer' => [
-                    TicketWorkOrder::CUSTOMER_RESPONSE->value => 'Customer Response',
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value => 'Workaround Accepted By Customer',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value => 'Resolution Accepted by Customer',
-                ],
-            ];
-        }
-        if ($record->level_id == Level::where('code', 2)->first()->id && auth()->user()->can('view_high_technical_support_create_order_type_ticket')) {
-            return [
-                'SL1' => [
-                    TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value => 'Feedback to SL1',
-                    TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL1 Troubleshooting Activity',
-                ],
-                'SL2' => [
-                    TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Workaround Accepted by SL2',
-                    TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value => 'Resolution Accepted by SL2',
-                ],
-            ];
-        }
-        if ($record->level_id == Level::where('code', 3)->first()->id && auth()->user()->can('view_external_technical_support_create_order_type_ticket')) {
-            return [
-                'SL2' => [
-                    TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value => 'Feedback to SL2',
-                    TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value => 'SL2 Troubleshooting Activity',
-                ],
-            ];
+        $createWorkOrderType = [];
+        if ($record->level_id == Level::where('code', 1)->first()->id) {
+            if (auth()->user()->can('view_customer_request_create_order_type_ticket')) {
+                $createWorkOrderType['Customer'][TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value] = 'Feedback to Customer';
+                $createWorkOrderType['Customer'][TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value] = 'Customer Troubleshooting Activity';
+            }
+            if (auth()->user()->can('view_customer_response_create_order_type_ticket')) {
+                $createWorkOrderType['Customer'][TicketWorkOrder::CUSTOMER_RESPONSE->value] = 'Customer Response';
+                $createWorkOrderType['Customer'][TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value] = 'Workaround Accepted By Customer';
+                $createWorkOrderType['Customer'][TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value] = 'Resolution Accepted by Customer';
+            }
+            return $createWorkOrderType;
+        } elseif ($record->level_id == Level::where('code', 2)->first()->id) {
+            if (auth()->user()->can('view_customer_request_create_order_type_ticket')) {
+                $createWorkOrderType['Customer'][TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value] = 'Feedback to Customer';
+                $createWorkOrderType['Customer'][TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value] = 'Customer Troubleshooting Activity';
+            }
+            if (auth()->user()->can('view_customer_response_create_order_type_ticket')) {
+                $createWorkOrderType['Customer'][TicketWorkOrder::CUSTOMER_RESPONSE->value] = 'Customer Response';
+                $createWorkOrderType['Customer'][TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value] = 'Workaround Accepted By Customer';
+                $createWorkOrderType['Customer'][TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value] = 'Resolution Accepted by Customer';
+            }
+            if (auth()->user()->can('view_technical_support_request_create_order_type_ticket')) {
+                $createWorkOrderType['SL1'][TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value] = 'Feedback to SL1';
+                $createWorkOrderType['SL1'][TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value] = 'SL1 Troubleshooting Activity';
+            }
+            if (auth()->user()->can('view_technical_support_response_create_order_type_ticket')) {
+                $createWorkOrderType['SL1'][TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value] = 'SL1 Response';
+                $createWorkOrderType['SL1'][TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value] = 'Workaround Accepted by SL1';
+                $createWorkOrderType['SL1'][TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value] = 'Resolution Accepted by SL1';
+            }
+            return $createWorkOrderType;
+        } elseif ($record->level_id == Level::where('code', 3)->first()->id) {
+            if (auth()->user()->can('view_customer_request_create_order_type_ticket')) {
+                $createWorkOrderType['Customer'][TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value] = 'Feedback to Customer';
+                $createWorkOrderType['Customer'][TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value] = 'Customer Troubleshooting Activity';
+            }
+            if (auth()->user()->can('view_customer_response_create_order_type_ticket')) {
+                $createWorkOrderType['Customer'][TicketWorkOrder::CUSTOMER_RESPONSE->value] = 'Customer Response';
+                $createWorkOrderType['Customer'][TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value] = 'Workaround Accepted By Customer';
+                $createWorkOrderType['Customer'][TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value] = 'Resolution Accepted by Customer';
+            }
+            if (auth()->user()->can('view_technical_support_request_create_order_type_ticket')) {
+                $createWorkOrderType['SL1'][TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value] = 'Feedback to SL1';
+                $createWorkOrderType['SL1'][TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value] = 'SL1 Troubleshooting Activity';
+            }
+            if (auth()->user()->can('view_technical_support_response_create_order_type_ticket')) {
+                $createWorkOrderType['SL1'][TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value] = 'SL1 Response';
+                $createWorkOrderType['SL1'][TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value] = 'Workaround Accepted by SL1';
+                $createWorkOrderType['SL1'][TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value] = 'Resolution Accepted by SL1';
+            }
+            if (auth()->user()->can('view_high_technical_support_request_create_order_type_ticket')) {
+                $createWorkOrderType['SL2'][TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value] = 'Feedback to SL2';
+                $createWorkOrderType['SL2'][TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value] = 'SL2 Troubleshooting Activity';
+            }
+            if (auth()->user()->can('view_high_technical_support_response_create_order_type_ticket')) {
+                $createWorkOrderType['SL2'][TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value] = 'SL2 Response';
+                $createWorkOrderType['SL2'][TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value] = 'Workaround Accepted by SL2';
+                $createWorkOrderType['SL2'][TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value] = 'Resolution Accepted by SL2';
+            }
+            return $createWorkOrderType;
         }
         return [];
     }
