@@ -305,7 +305,7 @@ class EditTicket extends EditRecord
                             ->title('Ticket has been canceled')
                             ->success()
                             ->send();
-                        return redirect('/admin/tickets/' . $record->id);
+                        return redirect('/admin/tickets');
                     });
                 }),
 
