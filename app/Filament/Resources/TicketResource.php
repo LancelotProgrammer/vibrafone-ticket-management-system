@@ -125,7 +125,9 @@ class TicketResource extends Resource implements HasShieldPermissions
 
             'view_history',
             // NOTE: all permissions below need the {view_history} permission to be enabled
-            'edit_history_date',
+            'edit_history_date',// NOTE: this permission is only for admins
+            'view_history_attachments',
+            'delete_history', // NOTE: this permission is only for admins
             'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_technical_support_order_type / view_history_high_technical_support_order_type / view_history_external_technical_support_order_type}
             'view_history_customer_order_type',
             'view_history_technical_support_order_type',
@@ -428,8 +430,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     'ticket_id' => $record->id,
                                     'title' => 'Ticket has been activated',
                                     'owner' => auth()->user()->email,
-                                    'work_order' => $record->work_order,
-                                    'sub_work_order' => $record->sub_work_order,
+                                    'work_order' => null,
+                                    'sub_work_order' => null,
                                     'status' => $record->status,
                                     'handler' => $record->handler,
                                     'created_at' => now(),
@@ -459,8 +461,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     'ticket_id' => $record->id,
                                     'title' => 'Ticket has been archived',
                                     'owner' => auth()->user()->email,
-                                    'work_order' => $record->work_order,
-                                    'sub_work_order' => $record->sub_work_order,
+                                    'work_order' => null,
+                                    'sub_work_order' => null,
                                     'status' => $record->status,
                                     'handler' => $record->handler,
                                     'created_at' => now(),
@@ -517,8 +519,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                         'ticket_id' => $record->id,
                                         'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
                                         'owner' => auth()->user()->email,
-                                        'work_order' => $record->work_order,
-                                        'sub_work_order' => $record->sub_work_order,
+                                        'work_order' => null,
+                                        'sub_work_order' => null,
                                         'status' => $record->status,
                                         'handler' => $record->handler,
                                         'created_at' => now(),

@@ -2,18 +2,18 @@
 
 namespace App\Filament\Resources\TicketResource\RelationManagers;
 
-use App\Enums\TicketSubWorkOrder;
 use App\Enums\TicketWorkOrder;
 use App\Filament\Resources\TicketResource;
+use App\Models\TicketHistory;
 use Filament\Forms;
 use Filament\Forms\Form;
 use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Tables;
+use Filament\Tables\Actions\DeleteAction;
 use Filament\Tables\Actions\EditAction;
 use Filament\Tables\Actions\ViewAction;
 use Filament\Tables\Table;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
 class TicketHistoryRelationManager extends RelationManager
@@ -38,56 +38,131 @@ class TicketHistoryRelationManager extends RelationManager
     public function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(function (Builder $query) {
+            ->modifyQueryUsing(function () {
                 $record = $this->getOwnerRecord();
+                $query = TicketHistory::query();
                 if (auth()->user()->can('view_history_all_order_type_ticket')) {
                     return $query->where('ticket_id', $record->id)->orderByDesc('created_at', 'des');
                 }
                 if (auth()->user()->can('view_history_customer_order_type_ticket')) {
-                    return $query->where('ticket_id', $record->id)
-                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
-                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)
-                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value)
-                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)
-                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
-                        ->orderByDesc('created_at', 'des');
+                    return $query
+                    ->where(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value);
+                    })
+                    ->orderByDesc('created_at', 'des');
                 }
                 if (auth()->user()->can('view_history_technical_support_order_type_ticket')) {
-                    return $query->where('ticket_id', $record->id)
-                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value)
-                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)
-                        ->orWhere('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value)
-                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)
-                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)
-                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
-                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
-                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
-                        ->orderByDesc('created_at', 'des');
+                    return $query
+                    ->where(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::FEEDBACK_TO_CUSTOMER->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::CUSTOMER_RESPONSE->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orderByDesc('created_at', 'des');
                 }
                 if (auth()->user()->can('view_history_high_technical_support_order_type_ticket')) {
-                    return $query->where('ticket_id', $record->id)
-                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
-                        ->orWhere('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value)
-                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
-                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value)
-                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
-                        ->orderByDesc('created_at', 'des');
+                    return $query
+                    ->where(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)
+                            ->where('work_order', TicketWorkOrder::FEEDBACK_TO_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::TECHNICAL_SUPPORT_RESPONSE->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orderByDesc('created_at', 'des');
                 }
                 if (auth()->user()->can('view_history_external_technical_support_order_type_ticket')) {
-                    return $query->where('ticket_id', $record->id)
-                        ->orWhere('work_order', TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value)
-                        ->orWhere('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value)
-                        ->orWhere('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
-                        ->orWhere('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value)
-                        ->orderByDesc('created_at', 'des');
+                    return $query
+                    ->where(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::FEEDBACK_TO_HIGH_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::HIGH_TECHNICAL_SUPPORT_RESPONSE->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orWhere(function ($query) use ($record) {
+                        $query->where('ticket_id', $record->id)->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_HIGH_TECHNICAL_SUPPORT->value);
+                    })
+                    ->orderByDesc('created_at', 'des');
                 }
             })
             ->recordTitleAttribute('title')
@@ -129,7 +204,10 @@ class TicketHistoryRelationManager extends RelationManager
                         return TicketResource::isTicketEnabled($livewire->getOwnerRecord());
                     }),
                 ViewAction::make()
+                    ->hidden(!(auth()->user()->can('view_history_attachments_ticket')))
                     ->label('View Attachments'),
+                DeleteAction::make()
+                    ->hidden(!(auth()->user()->can('delete_history_ticket'))),
             ])
             ->bulkActions([
                 //
