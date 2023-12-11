@@ -52,11 +52,7 @@ class TicketAssignedToCurrentUserTable extends BaseWidget
                 Tables\Actions\Action::make('go_to')
                     ->label(function ($record) {
                         if (TicketResource::isTicketEnabled($record)) {
-                            if (auth()->user()->can('can_access_any_ticket')) {
-                                return 'GO TO';
-                            } else {
-                                return 'Closed';
-                            }
+                            return 'GO TO';
                         } else {
                             return 'Closed';
                         }
@@ -74,11 +70,7 @@ class TicketAssignedToCurrentUserTable extends BaseWidget
                     })
                     ->disabled(function ($record) {
                         if (TicketResource::isTicketEnabled($record)) {
-                            if (auth()->user()->can('can_access_any_ticket')) {
-                                return false;
-                            } else {
-                                return true;
-                            }
+                            return false;
                         } else {
                             return true;
                         }
