@@ -59,11 +59,7 @@ class TicketAssignedToCurrentUserTable extends BaseWidget
                     })
                     ->color(function ($record) {
                         if (TicketResource::isTicketEnabled($record)) {
-                            if (auth()->user()->can('can_access_any_ticket')) {
-                                return 'success';
-                            } else {
-                                return 'danger';
-                            }
+                            return 'success';
                         } else {
                             return 'danger';
                         }
