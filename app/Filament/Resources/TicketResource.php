@@ -13,12 +13,12 @@ use App\Filament\Resources\TicketResource\Pages\ViewTicket;
 use App\Filament\Resources\TicketResource\RelationManagers\TicketHistoryRelationManager;
 use App\Models\Category;
 use App\Models\Department;
-use App\Models\Level;
 use App\Models\Priority;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\Type;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
+use Carbon\Carbon;
 use Exception;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
@@ -393,6 +393,16 @@ class TicketResource extends Resource implements HasShieldPermissions
                     Tables\Actions\ViewAction::make()
                         ->label('View Details'),
 
+                    // NOTE: export_ticket action
+                    Tables\Actions\Action::make('export_ticket')
+                        ->label('Export PDF')
+                        ->icon('heroicon-m-arrow-down-circle')
+                        ->color('success')
+                        ->hidden(!(auth()->user()->can('can_export_pdf_ticket')))
+                        ->action(function (Ticket $record): void {
+                            redirect('/tickets/' . $record->id . '/pdf');
+                        }),
+
                     // NOTE: activate_ticket action
                     Tables\Actions\Action::make('activate_ticket')
                         ->icon('heroicon-m-check-badge')
@@ -542,25 +552,108 @@ class TicketResource extends Resource implements HasShieldPermissions
                         ExcelExport::make()
                             ->withColumns([
                                 Column::make('ticket_identifier'),
-                                Column::make('type')
-                                    ->formatStateUsing(function ($record) {
-                                        return Type::where('id', $record->type_id)->first()->title;
-                                    }),
                                 Column::make('department')
-                                    ->formatStateUsing(function ($record) {
+                                    ->getStateUsing(function ($record) {
                                         return Department::where('id', $record->department_id)->first()->title;
                                     }),
+                                Column::make('company'),
+                                Column::make('owner')
+                                    ->getStateUsing(function ($record) {
+                                        return $record->customer()->where('owner', 1)->first()->email ?? 'No email found';
+                                    }),
+                                Column::make('ne_product'),
+                                Column::make('sw_version'),
+                                Column::make('type')
+                                    ->getStateUsing(function ($record) {
+                                        return Type::where('id', $record->type_id)->first()->title;
+                                    }),
                                 Column::make('priority')
-                                    ->formatStateUsing(function ($record) {
+                                    ->getStateUsing(function ($record) {
                                         return Priority::where('id', $record->priority_id)->first()->title;
                                     }),
-                                Column::make('category')
-                                    ->formatStateUsing(function ($record) {
-                                        return Category::where('id', $record->category_id)->first()->title;
-                                    }),
-                                Column::make('escalated')
+                                Column::make('start_at'),
+                                Column::make('end_at'),
+                                Column::make('description'),
+                                Column::make('status'),
+                                Column::make('handler'),
+                                Column::make('update')
                                     ->getStateUsing(function ($record) {
-                                        return 'test';
+                                        return $record->ticketHistory->last()->title ?? 'No Update';
+                                    }),
+                                Column::make('last_action')
+                                    ->getStateUsing(function ($record) {
+                                        $ticket = $record->ticketHistory->whereNotNull('work_order');
+                                        if ($ticket->count() > 0) {
+                                            if (is_null($ticket->last()?->sub_work_order)) {
+                                                return TicketHistoryRelationManager::formatTitleUsing(
+                                                    $ticket->last()->work_order
+                                                );
+                                            } else {
+                                                return TicketHistoryRelationManager::formatTitleUsing(
+                                                    $ticket->last()->work_order . ' - ' . $ticket->last()->sub_work_order
+                                                );
+                                            }
+                                        } else {
+                                            return 'No Action';
+                                        }
+                                    }),
+                                Column::make('escalated_to_high_technical_support_at'),
+                                Column::make('troubleshooting_activity_for_customer')
+                                    ->getStateUsing(function ($record) {
+                                        return $record->ticketHistory->where(
+                                            'work_order',
+                                            TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value
+                                        )->first()?->created_at ?? 'No Date';
+                                    }),
+                                Column::make('troubleshooting_activity_for_technical_support')
+                                    ->getStateUsing(function ($record) {
+                                        return $record->ticketHistory->where(
+                                            'work_order',
+                                            TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value
+                                        )->first()?->created_at ?? 'No Date';
+                                    }),
+                                Column::make('workaround_solution_for_customer_provided')
+                                    ->getStateUsing(function ($record) {
+                                        if ($record->ticketHistory->where(
+                                            'work_order',
+                                            TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value
+                                        )->count() > 0) {
+                                            return 'Yes';
+                                        } else {
+                                            return 'No';
+                                        }
+                                    }),
+                                Column::make('workaround_solution_duration')
+                                    ->getStateUsing(function ($record) {
+                                        if (!is_null($record->ticketHistory->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)->first()?->created_at)) {
+                                            return Carbon::create($record->start_at)->diffInDays(Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)->first()?->created_at));
+                                        } else {
+                                            return 'no workaround solution duration';
+                                        }
+                                    }),
+                                // Column::make('duration_for_fixing_in_days_so_far_even_not_closed_indicate_days_so_far')
+                                //     ->getStateUsing(function ($record) {
+                                //         if ($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->count() > 0) {
+                                //             return Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->last()->created_at)->diffInDays(Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)->last()->created_at));
+                                //         } else {
+                                //             return 'NON';
+                                //         }
+                                //     }),
+                                Column::make('final_solution_provided')
+                                    ->getStateUsing(function ($record) {
+                                        if ($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->count() > 0) {
+                                            return 'Yes';
+                                        } else {
+                                            return 'No';
+                                        }
+                                    }),
+                                Column::make('final_solution_duration')
+                                    ->getStateUsing(function ($record) {
+                                        if (!is_null($record->end_at)) {
+                                            return Carbon::create($record->start_at)->diffInDays($record->end_at);
+                                        } else {
+                                            return 'no final solution duration';
+                                        }
                                     }),
                             ]),
                     ]),

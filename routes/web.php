@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\HomePageController;
+use App\Http\Controllers\PDFController;
 use App\Mail\TicketWorkOrder;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\Route;
@@ -26,6 +27,7 @@ Route::post('/contact', [HomePageController::class, 'createContact']);
 Route::get('/login', function () {
     return redirect('/admin/login');
 })->name('login');
+Route::get('tickets/{id}/pdf', PDFController::class)->name('ticket.pdf');
 
 if (App::environment('local')) {
     Route::get('/mailable', function () {
