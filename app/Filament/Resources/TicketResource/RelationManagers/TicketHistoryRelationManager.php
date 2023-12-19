@@ -205,6 +205,9 @@ class TicketHistoryRelationManager extends RelationManager
                     }),
                 ViewAction::make()
                     ->hidden(!(auth()->user()->can('view_history_attachments_ticket')))
+                    ->visible(function ($record) {
+                        return !is_null($record->work_order);
+                    })
                     ->label('View Attachments'),
                 DeleteAction::make()
                     ->hidden(!(auth()->user()->can('delete_history_ticket'))),

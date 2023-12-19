@@ -2,32 +2,73 @@
 <html>
 
 <head>
-    <title>laravel-pdf</title>
+    <title>Export-PDF</title>
     <style>
-        table tr th {
-            background-color: #04AA6D;
-            color: white;
-            border: 1px solid #ddd;
-            padding: 8px;
-        }
-
-        table tr td {
-            border: 1px solid #ddd;
-            padding: 8px;
+        .page-break {
+            page-break-after: always;
         }
     </style>
 </head>
 
 <body>
-    <h3>Laravel 10</h3>
-    <table>
-        <tr>
-            <th>id</th>
-        </tr>
-        <tr>
-            <td>{{ $id }}</td>
-        </tr>
-    </table>
+
+    <h1>Page 1</h1>
+
+    <h2>Ticket: {{ $ticket->ticket_identifier }} - {{ $ticket->title }}</h2>
+
+    <hr>
+
+    <h2>Ticket Data:</h2>
+    <h4>Company: {{ $ticket->company }}</h4>
+    <h4>NE product: {{ $ticket->ne_product }}</h4>
+    <h4>SW version: {{ $ticket->sw_version }}</h4>
+    <h4>Description: {{ $ticket->description }}</h4>
+
+    <hr>
+
+    <h2>Ticket Meta Data:</h2>
+    <h4>Department: {{ $ticket->department->title }}</h4>
+    <h4>Type: {{ $ticket->type->title }}</h4>
+    <h4>Priority: {{ $ticket->priority->title }}</h4>
+    <h4>Category: {{ $ticket->category->title }}</h4>
+    <h4>Created at: {{ $ticket->created_at }}</h4>
+    <h4>Started at: {{ $ticket->start_at }}</h4>
+    <h4>Ended at: {{ $ticket->end_at }}</h4>
+    <h4>Canceled at: {{ $ticket->cancel_at }}</h4>
+    <h4>Escalated to SL2 at: {{ $ticket->escalated_to_high_technical_support_at }}</h4>
+    {{-- <h4>Escalated to SL3 at: {{ $ticket->escalated_to_external_technical_support_at }}</h4> --}}
+
+    <div class="page-break"></div>
+    <h1>Page 2</h1>
+
+    <h4>Customers Count: {{ $ticket->customer->count() }}</h4>
+    @foreach ($ticket->customer as $customer)
+        <h4>Customer: {{ $customer->email }}</h4>
+    @endforeach
+    <h4>SL1 Count: {{ $ticket->technicalSupport->count() }}</h4>
+    @foreach ($ticket->technicalSupport as $technicalSupport)
+        <h4>SL1: {{ $technicalSupport->email }}</h4>
+    @endforeach
+    <h4>SL2 Count: {{ $ticket->highTechnicalSupport->count() }}</h4>
+    @foreach ($ticket->highTechnicalSupport as $highTechnicalSupport)
+        <h4>SL2: {{ $highTechnicalSupport->email }}</h4>
+    @endforeach
+    {{-- <h4>SL3 Count: {{ $ticket->externalTechnicalSupport->count() }}</h4>
+    @foreach ($ticket->externalTechnicalSupport as $externalTechnicalSupport)
+        <h4>SL3: {{ $externalTechnicalSupport->email }}</h4>
+    @endforeach
+    <hr> --}}
+
+    <div class="page-break"></div>
+    <h1>Page 3</h1>
+
+    <h2>Work Order Flow</h2>
+    <hr>
+    @foreach ($ticketHistories as $ticketHistory)
+        <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->title }} </h4>
+        <hr>
+    @endforeach
+
 </body>
 
 </html>

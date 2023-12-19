@@ -27,7 +27,8 @@ Route::post('/contact', [HomePageController::class, 'createContact']);
 Route::get('/login', function () {
     return redirect('/admin/login');
 })->name('login');
-Route::get('tickets/{id}/pdf', PDFController::class)->name('ticket.pdf');
+
+Route::middleware('auth')->get('tickets/{id}/pdf', PDFController::class)->name('ticket.pdf');
 
 if (App::environment('local')) {
     Route::get('/mailable', function () {
