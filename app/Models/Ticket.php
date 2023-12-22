@@ -85,4 +85,20 @@ class Ticket extends Model
     {
         return $this->hasMany('App\Models\TicketHistory');
     }
+
+    public function getMedia() : array
+    {
+        $media = [];
+        foreach ($this->ticketHistory as $history) {
+            if (is_null($history->getMedia())) {
+                continue;
+            }
+            $media = array_merge($media, $history->getMedia());
+        }
+        if (is_null($this->attachments)) {
+            return $media;
+        } else {
+            return array_merge($media, $this->attachments);
+        }
+    }
 }

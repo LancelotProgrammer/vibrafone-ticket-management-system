@@ -29,7 +29,7 @@ class TicketHistoryRelationManager extends RelationManager
                 Forms\Components\FileUpload::make('attachments')
                     ->dehydrated(false)
                     ->multiple()
-                    ->openable()
+                    ->downloadable()
                     ->disabled()
                     ->columnSpanFull(),
             ]);

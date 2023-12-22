@@ -66,6 +66,18 @@
     <hr>
     @foreach ($ticketHistories as $ticketHistory)
         <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->title }} </h4>
+        <h4> By {{ $ticketHistory->owner }} </h4>
+        @if (!is_null($ticketHistory->work_order))
+            <h4> Body: {{ $ticketHistory->body }} </h4>
+        @endif
+        @if (!is_null($ticketHistory->attachments))
+            @if (count($ticketHistory->attachments) > 0)
+                <h4> Files: </h4>
+                @foreach ($ticketHistory->attachments as $attachment)
+                <h4> {{ $attachment }} </h4>
+                @endforeach
+            @endif
+        @endif
         <hr>
     @endforeach
 

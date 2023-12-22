@@ -252,7 +252,7 @@ class EditTicket extends EditRecord
                         $record->technicalSupport()->attach($data['user_id']);
                         $ticketHistory = new TicketHistory([
                             'ticket_id' => $record->id,
-                            'title' => 'Ticket has been assigned: ' . User::where('id', $data['user_id'])->first()->email,
+                            'title' => 'Ticket has been assigned to: ' . User::where('id', $data['user_id'])->first()->email,
                             'owner' => auth()->user()->email,
                             'work_order' => null,
                             'sub_work_order' => null,
@@ -643,10 +643,6 @@ class EditTicket extends EditRecord
             Section::make()
                 ->schema([
                     FileUpload::make('attachments')
-                        ->getUploadedFileNameForStorageUsing(
-                            fn (TemporaryUploadedFile $file, $get): string => (string) str($file->getClientOriginalName())
-                                ->prepend(now()->toDateString() . '-' . $get('work_order') . '-'),
-                        )
                         ->multiple()
                         ->columnSpanFull(),
                     Section::make('Choose Work Order Type')

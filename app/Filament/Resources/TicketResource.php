@@ -36,6 +36,7 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Redirect;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -71,6 +72,7 @@ class TicketResource extends Resource implements HasShieldPermissions
             'can_archive',
             'can_export_excel',
             'can_export_pdf',
+            'can_download_all_files',
 
             'view_handler',
             'view_status',
@@ -125,7 +127,7 @@ class TicketResource extends Resource implements HasShieldPermissions
 
             'view_history',
             // NOTE: all permissions below need the {view_history} permission to be enabled
-            'edit_history_date',// NOTE: this permission is only for admins
+            'edit_history_date', // NOTE: this permission is only for admins
             'view_history_attachments',
             'delete_history', // NOTE: this permission is only for admins
             'view_history_all_order_type', // this permission make the user ignores {view_history_customer_order_type / view_history_technical_support_order_type / view_history_high_technical_support_order_type / view_history_external_technical_support_order_type}
@@ -395,15 +397,30 @@ class TicketResource extends Resource implements HasShieldPermissions
                     Tables\Actions\ViewAction::make()
                         ->label('View Details'),
 
-                    // NOTE: export_ticket action
-                    Tables\Actions\Action::make('export_ticket')
-                        ->label('Export PDF')
-                        ->icon('heroicon-m-arrow-down-circle')
-                        ->color('success')
-                        ->hidden(!(auth()->user()->can('can_export_pdf_ticket')))
-                        ->action(function (Ticket $record): void {
-                            redirect('/tickets/' . $record->id . '/pdf');
-                        }),
+                    Tables\Actions\ActionGroup::make([
+
+                        // NOTE: export_ticket action
+                        Tables\Actions\Action::make('export_ticket')
+                            ->label('Export PDF')
+                            ->icon('heroicon-m-arrow-down-circle')
+                            ->color('success')
+                            ->hidden(!(auth()->user()->can('can_export_pdf_ticket')))
+                            ->action(function (Ticket $record): void {
+                                redirect('/tickets/' . $record->id . '/pdf');
+                            }),
+
+                        // NOTE: export_ticket action
+                        Tables\Actions\Action::make('download_all_files')
+                            ->label('Download All Files')
+                            ->icon('heroicon-m-arrow-down-on-square-stack')
+                            ->color('primary')
+                            ->hidden(!(auth()->user()->can('can_download_all_files_ticket')))
+                            ->action(function (Ticket $record): void {
+                                redirect('/tickets/' . $record->id . '/files/redirect');
+                            }),
+                    ])
+                        ->label('Download')
+                        ->grouped(),
 
                     // NOTE: activate_ticket action
                     Tables\Actions\Action::make('activate_ticket')
@@ -878,9 +895,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                     Forms\Components\Section::make('Ticket Files')
                         ->schema([
                             Forms\Components\FileUpload::make('attachments')
+                                ->downloadable()
                                 ->disabled(true)
                                 ->dehydrated(true)
-                                ->openable()
                                 ->columnSpanFull()
                                 ->multiple(),
                         ])
@@ -1038,8 +1055,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             Forms\Components\FileUpload::make('attachments')
                                 ->multiple()
                                 ->downloadable()
-                                ->columnSpanFull()
-                                ->openable(),
+                                ->columnSpanFull(),
                         ])
                         ->columnSpan(4)
                         ->columns(3),

@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\DownloadTicketFilesController;
 use App\Http\Controllers\HomePageController;
 use App\Http\Controllers\PDFController;
 use App\Mail\TicketWorkOrder;
@@ -29,6 +30,8 @@ Route::get('/login', function () {
 })->name('login');
 
 Route::middleware('auth')->get('tickets/{id}/pdf', PDFController::class)->name('ticket.pdf');
+Route::middleware('auth')->get('tickets/{id}/files/redirect', [DownloadTicketFilesController::class, 'redirectToDownloadTicketFiles'])->name('tickets.files.redirect');
+Route::middleware('auth')->get('tickets/{id}/files/download', [DownloadTicketFilesController::class, 'downloadTicketFiles'])->name('tickets.files.download');
 
 if (App::environment('local')) {
     Route::get('/mailable', function () {

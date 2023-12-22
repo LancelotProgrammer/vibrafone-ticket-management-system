@@ -1,14 +1,14 @@
 @extends('layouts.master')
 
 @section('title')
-    Contact Us
+    Download Ticket Files
 @endsection
 
 @section('carousel-title')
-    Contact Us
+    Download Ticket Files
 @endsection
 
 @section('content')
     @include('components.small-carousel')
-    @include('components.contact')
+    @include('components.download')
 @endsection

@@ -25,4 +25,9 @@ class TicketHistory extends Model
     protected $casts = [
         'attachments' => 'array',
     ];
+
+    public function getMedia()
+    {
+        return $this->attachments;
+    }
 }
