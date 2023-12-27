@@ -222,12 +222,12 @@ class TicketHistoryRelationManager extends RelationManager
 
     public static function formatTitleUsing($state): string
     {
-        if (strpos($state, 'Technical Support') !== false) {
-            return str_replace('Technical Support', 'SL1', $state);
-        } elseif (strpos($state, 'High Technical Support') !== false) {
+        if (strpos($state, 'High Technical Support') !== false) {
             return str_replace('High Technical Support', 'SL2', $state);
         } elseif (strpos($state, 'External Technical Support') !== false) {
             return str_replace('External Technical Support', 'SL3', $state);
+        } elseif (strpos($state, 'Technical Support') !== false) {
+            return str_replace('Technical Support', 'SL1', $state);
         } else {
             return $state;
         }

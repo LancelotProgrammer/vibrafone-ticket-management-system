@@ -136,14 +136,22 @@ class TicketResource extends Resource implements HasShieldPermissions
             'view_history_high_technical_support_order_type',
             'view_history_external_technical_support_order_type',
 
+            'view_total_count',
+            'view_opened_count',
+            'view_closed_count',
             'view_archived_count',
             'view_canceled_count',
-            'view_closed_count',
             'view_owned_count',
-            'view_escalated_to_high_technical_support_count',
-            'view_escalated_to_external_technical_support_count',
-            'view_opened_count',
-            'view_total_count',
+            'view_escalated_to_high_technical_support_total_count',
+            'view_escalated_to_high_technical_support_opened_count',
+            'view_escalated_to_high_technical_support_closed_count',
+            'view_escalated_to_high_technical_support_archived_count',
+            'view_escalated_to_high_technical_support_canceled_count',
+            'view_escalated_to_external_technical_support_total_count',
+            'view_escalated_to_external_technical_support_opened_count',
+            'view_escalated_to_external_technical_support_closed_count',
+            'view_escalated_to_external_technical_support_archived_count',
+            'view_escalated_to_external_technical_support_canceled_count',
         ];
     }
 
@@ -368,6 +376,12 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->options(
                         Department::where('title', '!=', 'default')->pluck('title', 'id')
                     ),
+                SelectFilter::make('category_id')
+                    ->label('Technology')
+                    ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
+                    ->options(
+                        Category::all()->pluck('title', 'id')
+                    ),
                 Filter::make('created_at')
                     ->hidden(!(auth()->user()->can('can_filter_table_ticket')))
                     ->form([
@@ -534,7 +548,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                     }
                                     $ticketHistory = new TicketHistory([
                                         'ticket_id' => $record->id,
-                                        'title' => 'Ticket has been assigned to: ' . auth()->user()->email,
+                                        'title' => auth()->user()->email . 'is self assigned to Ticket',
                                         'owner' => auth()->user()->email,
                                         'work_order' => null,
                                         'sub_work_order' => null,
@@ -569,112 +583,9 @@ class TicketResource extends Resource implements HasShieldPermissions
                     ->hidden(!(auth()->user()->can('can_export_excel_ticket')))
                     ->exports([
                         ExcelExport::make()
-                            ->withColumns([
-                                Column::make('ticket_identifier'),
-                                Column::make('department')
-                                    ->getStateUsing(function ($record) {
-                                        return Department::where('id', $record->department_id)->first()->title;
-                                    }),
-                                Column::make('company'),
-                                Column::make('owner')
-                                    ->getStateUsing(function ($record) {
-                                        return $record->customer()->where('owner', 1)->first()->email ?? 'No email found';
-                                    }),
-                                Column::make('ne_product'),
-                                Column::make('sw_version'),
-                                Column::make('type')
-                                    ->getStateUsing(function ($record) {
-                                        return Type::where('id', $record->type_id)->first()->title;
-                                    }),
-                                Column::make('priority')
-                                    ->getStateUsing(function ($record) {
-                                        return Priority::where('id', $record->priority_id)->first()->title;
-                                    }),
-                                Column::make('start_at'),
-                                Column::make('end_at'),
-                                Column::make('description'),
-                                Column::make('status'),
-                                Column::make('handler'),
-                                Column::make('update')
-                                    ->getStateUsing(function ($record) {
-                                        return $record->ticketHistory->last()->title ?? 'No Update';
-                                    }),
-                                Column::make('last_action')
-                                    ->getStateUsing(function ($record) {
-                                        $ticket = $record->ticketHistory->whereNotNull('work_order');
-                                        if ($ticket->count() > 0) {
-                                            if (is_null($ticket->last()?->sub_work_order)) {
-                                                return TicketHistoryRelationManager::formatTitleUsing(
-                                                    $ticket->last()->work_order
-                                                );
-                                            } else {
-                                                return TicketHistoryRelationManager::formatTitleUsing(
-                                                    $ticket->last()->work_order . ' - ' . $ticket->last()->sub_work_order
-                                                );
-                                            }
-                                        } else {
-                                            return 'No Action';
-                                        }
-                                    }),
-                                Column::make('escalated_to_high_technical_support_at'),
-                                Column::make('troubleshooting_activity_for_customer')
-                                    ->getStateUsing(function ($record) {
-                                        return $record->ticketHistory->where(
-                                            'work_order',
-                                            TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value
-                                        )->first()?->created_at ?? 'No Date';
-                                    }),
-                                Column::make('troubleshooting_activity_for_technical_support')
-                                    ->getStateUsing(function ($record) {
-                                        return $record->ticketHistory->where(
-                                            'work_order',
-                                            TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value
-                                        )->first()?->created_at ?? 'No Date';
-                                    }),
-                                Column::make('workaround_solution_for_customer_provided')
-                                    ->getStateUsing(function ($record) {
-                                        if ($record->ticketHistory->where(
-                                            'work_order',
-                                            TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value
-                                        )->count() > 0) {
-                                            return 'Yes';
-                                        } else {
-                                            return 'No';
-                                        }
-                                    }),
-                                Column::make('workaround_solution_duration')
-                                    ->getStateUsing(function ($record) {
-                                        if (!is_null($record->ticketHistory->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)->first()?->created_at)) {
-                                            return Carbon::create($record->start_at)->diffInDays(Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)->first()?->created_at));
-                                        } else {
-                                            return 'no workaround solution duration';
-                                        }
-                                    }),
-                                // Column::make('duration_for_fixing_in_days_so_far_even_not_closed_indicate_days_so_far')
-                                //     ->getStateUsing(function ($record) {
-                                //         if ($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->count() > 0) {
-                                //             return Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->last()->created_at)->diffInDays(Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value)->last()->created_at));
-                                //         } else {
-                                //             return 'NON';
-                                //         }
-                                //     }),
-                                Column::make('final_solution_provided')
-                                    ->getStateUsing(function ($record) {
-                                        if ($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->count() > 0) {
-                                            return 'Yes';
-                                        } else {
-                                            return 'No';
-                                        }
-                                    }),
-                                Column::make('final_solution_duration')
-                                    ->getStateUsing(function ($record) {
-                                        if (!is_null($record->end_at)) {
-                                            return Carbon::create($record->start_at)->diffInDays($record->end_at);
-                                        } else {
-                                            return 'no final solution duration';
-                                        }
-                                    }),
-                            ]),
+                            ->withColumns(
+                                self::getExcelExportColumns()
+                            ),
                     ]),
             ])
             ->emptyStateActions([
@@ -1355,5 +1266,124 @@ class TicketResource extends Resource implements HasShieldPermissions
         } else {
             return false;
         }
+    }
+
+    public static function getExcelExportColumns(): array
+    {
+        return [
+            Column::make('ticket_identifier'),
+            Column::make('department')
+                ->getStateUsing(function ($record) {
+                    return Department::where('id', $record->department_id)->first()->title;
+                }),
+            Column::make('company'),
+            Column::make('owner')
+                ->getStateUsing(function ($record) {
+                    return $record->customer()->where('owner', 1)->first()->email ?? 'No email found';
+                }),
+            Column::make('ne_product'),
+            Column::make('sw_version'),
+            Column::make('type')
+                ->getStateUsing(function ($record) {
+                    return Type::where('id', $record->type_id)->first()->title;
+                }),
+            Column::make('priority')
+                ->getStateUsing(function ($record) {
+                    return Priority::where('id', $record->priority_id)->first()->title;
+                }),
+            Column::make('start_at')
+                ->getStateUsing(function ($record) {
+                    return $record->start_at ?? 'No start_at Date';
+                }),
+            Column::make('end_at')
+                ->getStateUsing(function ($record) {
+                    return $record->end_at ?? 'No end_at Date';
+                }),
+            Column::make('description'),
+            Column::make('status'),
+            Column::make('handler'),
+            Column::make('update')
+                ->getStateUsing(function ($record) {
+                    return $record->ticketHistory->last()->title ?? 'No Update';
+                }),
+            Column::make('last_action')
+                ->getStateUsing(function ($record) {
+                    $ticket = $record->ticketHistory->whereNotNull('work_order');
+                    if ($ticket->count() > 0) {
+                        if (is_null($ticket->last()?->sub_work_order)) {
+                            return TicketHistoryRelationManager::formatTitleUsing(
+                                $ticket->last()->work_order
+                            );
+                        } else {
+                            return TicketHistoryRelationManager::formatTitleUsing(
+                                $ticket->last()->work_order . ' - ' . $ticket->last()->sub_work_order
+                            );
+                        }
+                    } else {
+                        return 'No Action';
+                    }
+                }),
+            Column::make('escalated_to_high_technical_support_at')
+                ->getStateUsing(function ($record) {
+                    return $record->escalated_to_high_technical_support_at ?? 'No Date';
+                }),
+            Column::make('troubleshooting_activity_for_customer')
+                ->getStateUsing(function ($record) {
+                    return $record->ticketHistory->where(
+                        'work_order',
+                        TicketWorkOrder::CUSTOMER_TROUBLESHOOTING_ACTIVITY->value
+                    )->first()?->created_at ?? 'No Date';
+                }),
+            Column::make('troubleshooting_activity_for_technical_support')
+                ->getStateUsing(function ($record) {
+                    return $record->ticketHistory->where(
+                        'work_order',
+                        TicketWorkOrder::TECHNICAL_SUPPORT_TROUBLESHOOTING_ACTIVITY->value
+                    )->first()?->created_at ?? 'No Date';
+                }),
+            Column::make('workaround_solution_for_customer_provided')
+                ->getStateUsing(function ($record) {
+                    if ($record->ticketHistory->where(
+                        'work_order',
+                        TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value
+                    )->count() > 0) {
+                        return 'Yes';
+                    } else {
+                        return 'No';
+                    }
+                }),
+            Column::make('workaround_solution_duration')
+                ->getStateUsing(function ($record) {
+                    if (!is_null($record->ticketHistory->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)->first()?->created_at)) {
+                        return Carbon::create($record->start_at)->diffInDays(Carbon::create($record->ticketHistory->where('work_order', TicketWorkOrder::WORKAROUND_ACCEPTED_BY_CUSTOMER->value)->first()?->created_at));
+                    } else {
+                        return 'no workaround solution duration';
+                    }
+                }),
+            Column::make('duration_for_fixing')
+                ->getStateUsing(function ($record) {
+                    if ($record->end_at != null) {
+                        return Carbon::create($record->start_at)->diffInDays($record->end_at);
+                    } else {
+                        return Carbon::create(now())->diffInDays($record->start_at);
+                    }
+                }),
+            Column::make('final_solution_provided')
+                ->getStateUsing(function ($record) {
+                    if ($record->ticketHistory->where('work_order', TicketWorkOrder::RESOLUTION_ACCEPTED_BY_CUSTOMER->value)->count() > 0) {
+                        return 'Yes';
+                    } else {
+                        return 'No';
+                    }
+                }),
+            Column::make('final_solution_duration')
+                ->getStateUsing(function ($record) {
+                    if (!is_null($record->end_at)) {
+                        return Carbon::create($record->start_at)->diffInDays($record->end_at);
+                    } else {
+                        return 'no final solution duration';
+                    }
+                }),
+        ];
     }
 }

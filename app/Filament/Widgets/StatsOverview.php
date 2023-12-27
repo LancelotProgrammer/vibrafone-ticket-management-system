@@ -18,30 +18,57 @@ class StatsOverview extends BaseWidget
     protected function getStats(): array
     {
         $stat = [];
+        if (auth()->user()->can('view_total_count_ticket')) {
+            $stat[] = Stat::make('Total Tickets', Ticket::count());
+        }
+        if (auth()->user()->can('view_opened_count_ticket')) {
+            $stat[] = Stat::make('Opened Tickets', Ticket::whereNotNull('start_at')->count());
+        }
+        if (auth()->user()->can('view_closed_count_ticket')) {
+            $stat[] = Stat::make('Closed Tickets', Ticket::where('status', TicketStatus::CLOSED->value)->count());
+        }
         if (auth()->user()->can('view_archived_count_ticket')) {
             $stat[] = Stat::make('Archived Tickets', Ticket::whereNotNull('deleted_at')->count());
         }
         if (auth()->user()->can('view_canceled_count_ticket')) {
             $stat[] = Stat::make('Canceled Tickets', Ticket::whereNotNull('canceled_at')->count());
         }
-        if (auth()->user()->can('view_closed_count_ticket')) {
-            $stat[] = Stat::make('Closed Tickets', Ticket::where('status', TicketStatus::CLOSED->value)->count());
-        }
         if (auth()->user()->can('view_owned_count_ticket')) {
             $stat[] = Stat::make('Your Owned Tickets', auth()->user()->customerTickets()->where('owner', true)->count());
         }
-        if (auth()->user()->can('view_escalated_to_high_technical_support_count_ticket')) {
+
+        if (auth()->user()->can('view_escalated_to_high_technical_support_total_count_ticket')) {
             $stat[] = Stat::make('Escalated Tickets To SL2', Ticket::where('level_id', 3)->count());
         }
-        if (auth()->user()->can('view_escalated_to_external_technical_support_count_ticket')) {
+        if (auth()->user()->can('view_escalated_to_high_technical_support_opened_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL2', Ticket::where('level_id', 3)->whereNotNull('start_at')->count());
+        }
+        if (auth()->user()->can('view_escalated_to_high_technical_support_closed_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL2', Ticket::where('level_id', 3)->where('status', TicketStatus::CLOSED->value)->count());
+        }
+        if (auth()->user()->can('view_escalated_to_high_technical_support_archived_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL2', Ticket::where('level_id', 3)->whereNotNull('deleted_at')->count());
+        }
+        if (auth()->user()->can('view_escalated_to_high_technical_support_canceled_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL2', Ticket::where('level_id', 3)->whereNotNull('canceled_at')->count());
+        }
+
+        if (auth()->user()->can('view_escalated_to_external_technical_support_total_count_ticket')) {
             $stat[] = Stat::make('Escalated Tickets To SL3', Ticket::where('level_id', 4)->count());
         }
-        if (auth()->user()->can('view_opened_count_ticket')) {
-            $stat[] = Stat::make('Opened Tickets', Ticket::whereNotNull('start_at')->count());
+        if (auth()->user()->can('view_escalated_to_external_technical_support_opened_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL3', Ticket::where('level_id', 4)->whereNotNull('start_at')->count());
         }
-        if (auth()->user()->can('view_total_count_ticket')) {
-            $stat[] = Stat::make('Total Tickets', Ticket::count());
+        if (auth()->user()->can('view_escalated_to_external_technical_support_closed_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL3', Ticket::where('level_id', 4)->where('status', TicketStatus::CLOSED->value)->count());
         }
+        if (auth()->user()->can('view_escalated_to_external_technical_support_archived_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL3', Ticket::where('level_id', 4)->whereNotNull('deleted_at')->count());
+        }
+        if (auth()->user()->can('view_escalated_to_external_technical_support_canceled_count_ticket')) {
+            $stat[] = Stat::make('Escalated Tickets To SL3', Ticket::where('level_id', 4)->whereNotNull('canceled_at')->count());
+        }
+
         if (auth()->user()->can('view_any_contact')) {
             $stat[] = Stat::make('Total Contacts', Contact::count());
         }

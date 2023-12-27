@@ -31,16 +31,16 @@
     <h4>Type: {{ $ticket->type->title }}</h4>
     <h4>Priority: {{ $ticket->priority->title }}</h4>
     <h4>Category: {{ $ticket->category->title }}</h4>
-    <h4>Created at: {{ $ticket->created_at }}</h4>
-    <h4>Started at: {{ $ticket->start_at }}</h4>
-    <h4>Ended at: {{ $ticket->end_at }}</h4>
-    <h4>Canceled at: {{ $ticket->cancel_at }}</h4>
-    <h4>Escalated to SL2 at: {{ $ticket->escalated_to_high_technical_support_at }}</h4>
-    {{-- <h4>Escalated to SL3 at: {{ $ticket->escalated_to_external_technical_support_at }}</h4> --}}
+    <h4>Started at: {{ $ticket->start_at ?? 'no date' }}</h4>
+    <h4>Ended at: {{ $ticket->end_at ?? 'no date' }}</h4>
+    <h4>Canceled at: {{ $ticket->cancel_at ?? 'no date' }}</h4>
+    <h4>Escalated to SL2 at: {{ $ticket->escalated_to_high_technical_support_at ?? 'no date' }}</h4>
+    {{-- <h4>Escalated to SL3 at: {{ $ticket->escalated_to_external_technical_support_at ?? 'no date' }}</h4> --}}
 
     <div class="page-break"></div>
     <h1>Page 2</h1>
-
+    <h2>Ticket Users</h2>
+    <hr>
     <h4>Customers Count: {{ $ticket->customer->count() }}</h4>
     @foreach ($ticket->customer as $customer)
         <h4>Customer: {{ $customer->email }}</h4>
@@ -62,21 +62,35 @@
     <div class="page-break"></div>
     <h1>Page 3</h1>
 
-    <h2>Work Order Flow</h2>
+    <h2>Work Order Flow and Ticket History</h2>
     <hr>
     @foreach ($ticketHistories as $ticketHistory)
-        <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->title }} </h4>
-        <h4> By {{ $ticketHistory->owner }} </h4>
         @if (!is_null($ticketHistory->work_order))
-            <h4> Body: {{ $ticketHistory->body }} </h4>
-        @endif
-        @if (!is_null($ticketHistory->attachments))
-            @if (count($ticketHistory->attachments) > 0)
-                <h4> Files: </h4>
-                @foreach ($ticketHistory->attachments as $attachment)
-                <h4> {{ $attachment }} </h4>
-                @endforeach
+            @if (!is_null($ticketHistory->sub_work_order))
+                <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->work_order }} -
+                    {{ $ticketHistory->sub_work_order }} has been created </h4>
+            @else
+                <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->work_order }} has been created </h4>
             @endif
+            <h4> By {{ $ticketHistory->owner }} </h4>
+            @if (!is_null($ticketHistory->body))
+                <h4> Body: {{ $ticketHistory->body }} </h4>
+            @else
+                <h4> No Body </h4>
+            @endif
+            @if (!is_null($ticketHistory->attachments))
+                @if (count($ticketHistory->attachments) > 0)
+                    <h4> Files: </h4>
+                    @foreach ($ticketHistory->attachments as $attachment)
+                        <h4> {{ $attachment }} </h4>
+                    @endforeach
+                @else
+                    <h4> No Files Has Been attached </h4>
+                @endif
+            @endif
+        @else
+            <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->title }} </h4>
+            <h4> By {{ $ticketHistory->owner }} </h4>
         @endif
         <hr>
     @endforeach

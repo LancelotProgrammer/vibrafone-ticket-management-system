@@ -31,37 +31,37 @@ class TicketTypeCountChart extends ChartWidget
                 [
                     'label' => 'Ticket Chart',
                     'data' => [
+                        $openedTickets,
+                        $closedTickets,
                         $archivedTickets,
                         $canceledTickets,
-                        $closedTickets,
                         $escalatedToHighTechnicalSupport,
                         $escalatedToExternalTechnicalSupport,
-                        $openedTickets,
                     ],
                     'backgroundColor' => [
+                        'rgb(54, 162, 235)',
+                        'rgb(75, 192, 192)',
                         'rgb(255, 205, 86)',
                         'rgb(255, 99, 132)',
-                        'rgb(75, 192, 192)',
                         'rgb(153, 102, 255)',
-                        'rgb(255, 159, 64)',
-                        'rgb(54, 162, 235)',
+                        'rgb(45, 102, 255)',
                     ],
                 ],
             ],
             'labels' => [
+                'Opened Tickets',
+                'Closed Tickets',
                 'Archived Tickets',
                 'Canceled Tickets',
-                'Closed Tickets',
                 'Escalated To SL2',
                 'Escalated To SL3',
-                'Opened Tickets',
             ],
         ];
     }
 
     protected function getType(): string
     {
-        return 'pie';
+        return 'bar';
     }
 
     public static function canView(): bool
