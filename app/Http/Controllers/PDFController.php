@@ -22,7 +22,7 @@ class PDFController extends Controller
         if (auth()->user()->can('can_export_pdf_ticket') === false) {
             abort(403);
         }
-        if (TicketResource::canEdit(Ticket::where('id', $request->id)->first()) === false) {
+        if (TicketResource::canView(Ticket::where('id', $request->id)->first()) === false) {
             abort(403);
         }
         return Pdf::loadView(

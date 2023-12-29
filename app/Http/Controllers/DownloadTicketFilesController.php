@@ -23,7 +23,7 @@ class DownloadTicketFilesController extends Controller
             abort(403);
         }
         $ticket = Ticket::where('id', $request->id)->first();
-        if (TicketResource::canEdit($ticket) === false) {
+        if (TicketResource::canView($ticket) === false) {
             abort(403);
         }
         $files = $ticket->getMedia();
