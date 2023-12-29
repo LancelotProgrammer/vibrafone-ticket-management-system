@@ -34,7 +34,7 @@ class DownloadTicketFilesController extends Controller
                 ->send();
             return redirect()->back();
         }
-        return view('files.ticket-files-download', [
+        return view('Files.ticket-files-download', [
             'id' => $request->id,
         ]);
     }
