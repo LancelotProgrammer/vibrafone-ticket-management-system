@@ -36,7 +36,6 @@ use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Redirect;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -631,8 +630,8 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->columnSpanFull(),
                             Forms\Components\Textarea::make('description')
                                 ->required()
-                                ->columnSpanFull()
-                                ->maxLength(512),
+                                ->autosize()
+                                ->columnSpanFull(),
                         ])
                         ->columnSpan(4)
                         ->columns(3),
@@ -762,6 +761,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->dehydrated(true)
                                 ->columnSpanFull(),
                             Forms\Components\Textarea::make('description')
+                                ->autosize()
                                 ->disabled(
                                     function ($record) {
                                         return self::getDisableEditFormCondition($record);
@@ -769,8 +769,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 )
                                 ->dehydrated(true)
                                 ->required()
-                                ->columnSpanFull()
-                                ->maxLength(512),
+                                ->columnSpanFull(),
                         ])
                         ->columnSpan(4)
                         ->columns(4),
@@ -940,6 +939,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                             Forms\Components\TextInput::make('company')
                                 ->columnSpanFull(),
                             Forms\Components\Textarea::make('description')
+                                ->autosize()
                                 ->columnSpanFull(),
                         ])
                         ->columnSpan(4)

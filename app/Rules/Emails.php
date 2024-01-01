@@ -25,7 +25,7 @@ class Emails implements ValidationRule
             ];
             $validator = Validator::make($data, $rules);
             if ($validator->fails()) {
-                $fail('The value must be a valid array of email address.');
+                $fail('The value must be a valid array of email address split by a comma.');
             }
         }
     }

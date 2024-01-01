@@ -193,3 +193,7 @@ ALTER TABLE tickets
     RENAME COLUMN escalated_at TO escalated_to_high_technical_support_at;
 ALTER TABLE tickets
 ADD escalated_to_external_technical_support_at TIMESTAMP NULL DEFAULT NULL;
+ALTER TABLE tickets
+MODIFY description TEXT NOT NULL;
+ALTER TABLE ticket_histories
+MODIFY body TEXT NULL DEFAULT NULL;

@@ -752,8 +752,7 @@ class EditTicket extends EditRecord
                                 ->required()
                                 ->maxLength(255),
                             Textarea::make('body')
-                                ->required()
-                                ->maxLength(255),
+                                ->required(),
                             Checkbox::make('send_email')
                                 ->hidden(!(auth()->user()->can('send_email_in_order_type_ticket')))
                                 ->live(),

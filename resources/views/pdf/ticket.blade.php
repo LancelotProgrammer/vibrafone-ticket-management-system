@@ -12,8 +12,6 @@
 
 <body>
 
-    <h1>Page 1</h1>
-
     <h2>Ticket: {{ $ticket->ticket_identifier }} - {{ $ticket->title }}</h2>
 
     <hr>
@@ -38,7 +36,6 @@
     {{-- <h4>Escalated to SL3 at: {{ $ticket->escalated_to_external_technical_support_at ?? 'no date' }}</h4> --}}
 
     <div class="page-break"></div>
-    <h1>Page 2</h1>
     <h2>Ticket Users</h2>
     <hr>
     <h4>Customers Count: {{ $ticket->customer->count() }}</h4>
@@ -60,7 +57,6 @@
     <hr> --}}
 
     <div class="page-break"></div>
-    <h1>Page 3</h1>
 
     <h2>Work Order Flow and Ticket History</h2>
     <hr>
