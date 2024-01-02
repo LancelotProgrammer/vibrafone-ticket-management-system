@@ -1022,7 +1022,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                                 ->label('SL2')
                                 ->hidden(!(auth()->user()->can('view_high_technical_supports_ticket')))
                                 ->multiple()
-                                ->relationship('externalTechnicalSupport', 'email'),
+                                ->relationship('highTechnicalSupport', 'email'),
                             Forms\Components\Select::make('external_technical_support')
                                 ->label('SL3')
                                 ->hidden(!(auth()->user()->can('view_external_technical_supports_ticket')))
