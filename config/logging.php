@@ -65,6 +65,20 @@ return [
             'replace_placeholders' => true,
         ],
 
+        'sqlactions' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sql-actions.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
+        'sqlselects' => [
+            'driver' => 'daily',
+            'path' => storage_path('logs/sql-selects.log'),
+            'level' => env('LOG_LEVEL', 'debug'),
+            'replace_placeholders' => true,
+        ],
+
         'daily' => [
             'driver' => 'daily',
             'path' => storage_path('logs/laravel.log'),
