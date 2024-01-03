@@ -8,10 +8,13 @@ use App\Filament\Resources\TicketResource;
 use App\Mail\TicketCreated;
 use App\Models\Department;
 use App\Models\Level;
+use App\Models\Priority;
 use App\Models\Ticket;
 use App\Models\TicketHistory;
 use App\Models\User;
 use Carbon\Carbon;
+use Exception;
+use Filament\Notifications\Notification;
 use Filament\Resources\Pages\CreateRecord;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -37,6 +40,15 @@ class CreateTicket extends CreateRecord
             $data['handler'] = TicketHandler::TECHNICAL_SUPPORT->value;
             $data['level_id'] = Level::where('code', 1)->first()->id;
             $data['ticket_identifier'] = $ticketIdentifier;
+
+            $priority = Priority::where('id', $data['priority_id'])->first();
+            if ($priority->type_id != $data['type_id']) {
+                Notification::make()
+                    ->title('Priority is not a choose of the selected type')
+                    ->warning()
+                    ->send();
+                $this->halt();
+            }
 
             $created = static::getModel()::create($data);
 
