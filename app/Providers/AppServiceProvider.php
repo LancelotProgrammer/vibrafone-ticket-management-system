@@ -2,9 +2,12 @@
 
 namespace App\Providers;
 
+use Error;
+use Exception;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\ServiceProvider;
+use Throwable;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -48,15 +51,19 @@ class AppServiceProvider extends ServiceProvider
 
     function getFilesFromBacktrace()
     {
-        $files = [];
-        $backtrace = debug_backtrace();
-        foreach ($backtrace as $key => $value) {
-            if (strpos($value['file'], 'vendor') === false) {
-                $files[] = $value['file'] . ':' . $value['line'];
-            } else {
-                continue;
+        try {
+            $files = [];
+            $backtrace = debug_backtrace();
+            foreach ($backtrace as $key => $value) {
+                if (strpos($value['file'], 'vendor') === false) {
+                    $files[] = $value['file'] . ':' . $value['line'];
+                } else {
+                    continue;
+                }
             }
+            return $files;
+        } catch (Exception|Throwable|Error) {
+            return [];
         }
-        return $files;
     }
 }
