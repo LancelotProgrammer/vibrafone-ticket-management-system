@@ -1,3 +1,6 @@
+@php
+use App\Filament\Resources\TicketResource\RelationManagers\TicketHistoryRelationManager;
+@endphp
 <!DOCTYPE html>
 <html>
 
@@ -63,10 +66,10 @@
     @foreach ($ticketHistories as $ticketHistory)
         @if (!is_null($ticketHistory->work_order))
             @if (!is_null($ticketHistory->sub_work_order))
-                <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->work_order }} -
-                    {{ $ticketHistory->sub_work_order }} has been created </h4>
+                <h4> At {{ $ticketHistory->created_at }}: {{ TicketHistoryRelationManager::formatTitleUsing($ticketHistory->work_order) }} -
+                    {{ TicketHistoryRelationManager::formatTitleUsing($ticketHistory->sub_work_order) }} has been created </h4>
             @else
-                <h4> At {{ $ticketHistory->created_at }}: {{ $ticketHistory->work_order }} has been created </h4>
+                <h4> At {{ $ticketHistory->created_at }}: {{ TicketHistoryRelationManager::formatTitleUsing($ticketHistory->work_order) }} has been created </h4>
             @endif
             <h4> By {{ $ticketHistory->owner }} </h4>
             @if (!is_null($ticketHistory->body))

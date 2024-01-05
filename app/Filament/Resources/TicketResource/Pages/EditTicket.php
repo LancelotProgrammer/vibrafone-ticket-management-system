@@ -31,7 +31,6 @@ use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\App;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Mail;
-use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
 
 class EditTicket extends EditRecord
 {
