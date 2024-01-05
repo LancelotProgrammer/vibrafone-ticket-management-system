@@ -24,29 +24,29 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        DB::listen(function ($query) {
-            if (strpos(strtolower($query->sql), 'select') === 0) {
-                Log::channel('sqlselects')->info(
-                    $query->sql,
-                    [
-                        'bindings' => $query->bindings,
-                        'time' => $query->time,
-                        'trace' => "\n" . implode("\n", $this->getFilesFromBacktrace()),
-                    ]
-                );
-            } elseif (strpos(strtolower($query->sql), 'update `sessions`') === 0) {
-                return;
-            } else {
-                Log::channel('sqlactions')->info(
-                    $query->sql,
-                    [
-                        'bindings' => $query->bindings,
-                        'time' => $query->time,
-                        'trace' => "\n" . implode("\n", $this->getFilesFromBacktrace()),
-                    ]
-                );
-            }
-        });
+        // DB::listen(function ($query) {
+        //     if (strpos(strtolower($query->sql), 'select') === 0) {
+        //         Log::channel('sqlselects')->info(
+        //             $query->sql,
+        //             [
+        //                 'bindings' => $query->bindings,
+        //                 'time' => $query->time,
+        //                 'trace' => "\n" . implode("\n", $this->getFilesFromBacktrace()),
+        //             ]
+        //         );
+        //     } elseif (strpos(strtolower($query->sql), 'update `sessions`') === 0) {
+        //         return;
+        //     } else {
+        //         Log::channel('sqlactions')->info(
+        //             $query->sql,
+        //             [
+        //                 'bindings' => $query->bindings,
+        //                 'time' => $query->time,
+        //                 'trace' => "\n" . implode("\n", $this->getFilesFromBacktrace()),
+        //             ]
+        //         );
+        //     }
+        // });
     }
 
     function getFilesFromBacktrace()
