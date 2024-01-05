@@ -102,13 +102,13 @@ class EditTicket extends EditRecord
                             })->first();
 
                             if (is_null($highSupportManager)) {
-                                throw new ControlPanelDomainException('There is no high support manager');
+                                throw new ControlPanelDomainException('There is no SL2 manager');
                             }
 
                             Mail::to($highSupportManager->email)->send(new TicketEscalation($title, $emails));
 
                             $this->refreshFormData([
-                                'high_technical_support_user_id',
+                                'high_technical_support',
                             ]);
                         });
                         Notification::make()
@@ -196,13 +196,13 @@ class EditTicket extends EditRecord
                             })->first();
 
                             if (is_null($externalSupportManager)) {
-                                throw new ControlPanelDomainException('There is no external support manager');
+                                throw new ControlPanelDomainException('There is no SL3 manager');
                             }
 
                             Mail::to($externalSupportManager->email)->send(new TicketEscalation($title, $emails));
 
                             $this->refreshFormData([
-                                'external_technical_support_user_id',
+                                'external_technical_support',
                             ]);
                         });
                         Notification::make()
@@ -266,7 +266,7 @@ class EditTicket extends EditRecord
                         }
                         $record->save();
                         $this->refreshFormData([
-                            'technical_support_user_id',
+                            'technical_support',
                             'start_at',
                         ]);
                     });
