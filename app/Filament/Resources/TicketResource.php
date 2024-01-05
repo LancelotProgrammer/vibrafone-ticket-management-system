@@ -1252,17 +1252,13 @@ class TicketResource extends Resource implements HasShieldPermissions
         if (auth()->user()->can('can_view_any_details_ticket')) {
             return true;
         }
-        if (TicketResource::isTicketEnabled($record)) {
-            if (
-                $record->customer->contains(auth()->user()->id) ||
-                $record->technicalSupport->contains(auth()->user()->id) ||
-                $record->highTechnicalSupport->contains(auth()->user()->id) ||
-                $record->externalTechnicalSupport->contains(auth()->user()->id)
-            ) {
-                return true;
-            } else {
-                return false;
-            }
+        if (
+            $record->customer->contains(auth()->user()->id) ||
+            $record->technicalSupport->contains(auth()->user()->id) ||
+            $record->highTechnicalSupport->contains(auth()->user()->id) ||
+            $record->externalTechnicalSupport->contains(auth()->user()->id)
+        ) {
+            return true;
         } else {
             return false;
         }

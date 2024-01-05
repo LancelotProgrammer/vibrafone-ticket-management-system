@@ -51,21 +51,21 @@ class TicketAssignedToCurrentUserTable extends BaseWidget
             ->actions([
                 Tables\Actions\Action::make('go_to')
                     ->label(function ($record) {
-                        if (TicketResource::isTicketEnabled($record)) {
+                        if (TicketResource::canEdit($record)) {
                             return 'GO TO';
                         } else {
                             return 'Closed';
                         }
                     })
                     ->color(function ($record) {
-                        if (TicketResource::isTicketEnabled($record)) {
+                        if (TicketResource::canEdit($record)) {
                             return 'success';
                         } else {
                             return 'danger';
                         }
                     })
                     ->disabled(function ($record) {
-                        if (TicketResource::isTicketEnabled($record)) {
+                        if (TicketResource::canEdit($record)) {
                             return false;
                         } else {
                             return true;
