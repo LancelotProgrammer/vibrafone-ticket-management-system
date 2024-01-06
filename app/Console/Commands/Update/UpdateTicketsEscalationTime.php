@@ -6,7 +6,7 @@ use App\Models\Ticket;
 use Illuminate\Console\Command;
 use Illuminate\Support\Facades\DB;
 
-class UdpateTicketsEscalationTime extends Command
+class UpdateTicketsEscalationTime extends Command
 {
     /**
      * The name and signature of the console command.

@@ -24,12 +24,15 @@ class Ticket extends Model
         'sw_version',
         'work_order',
         'sub_work_order',
-        'attachments',
         'status',
         'handler',
         'start_at',
         'end_at',
-        'cancel_at',
+        'attachments',
+        'deleted_at',
+        'canceled_at',
+        'escalated_to_high_technical_support_at',
+        'escalated_to_external_technical_support_at',
     ];
 
     protected $casts = [

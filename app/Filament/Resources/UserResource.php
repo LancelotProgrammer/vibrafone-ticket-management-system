@@ -121,6 +121,7 @@ class UserResource extends Resource implements HasShieldPermissions
     {
         return $table
             ->columns([
+                Tables\Columns\TextColumn::make('id'),
                 Tables\Columns\TextColumn::make('department.title'),
                 Tables\Columns\TextColumn::make('level.title'),
                 Tables\Columns\TextColumn::make('email'),

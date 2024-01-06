@@ -19,7 +19,6 @@ use App\Models\TicketHistory;
 use App\Models\Type;
 use BezhanSalleh\FilamentShield\Contracts\HasShieldPermissions;
 use Carbon\Carbon;
-use Exception;
 use Filament\Forms;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Form;
@@ -27,6 +26,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Pages\Page;
 use Filament\Resources\Resource;
 use Filament\Tables;
+use Filament\Tables\Actions\DeleteBulkAction;
 use Filament\Tables\Columns\Layout\Split;
 use Filament\Tables\Columns\Layout\Stack;
 use Filament\Tables\Filters\Filter;
@@ -35,7 +35,6 @@ use Filament\Tables\Filters\TernaryFilter;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\DB;
 use pxlrbt\FilamentExcel\Actions\Tables\ExportBulkAction;
 use pxlrbt\FilamentExcel\Columns\Column;
 use pxlrbt\FilamentExcel\Exports\ExcelExport;
@@ -454,25 +453,25 @@ class TicketResource extends Resource implements HasShieldPermissions
                         })
                         ->requiresConfirmation()
                         ->action(function (Ticket $record): void {
-                            DB::transaction(function () use ($record) {
-                                $record->canceled_at = null;
-                                $ticketHistory = new TicketHistory([
-                                    'ticket_id' => $record->id,
-                                    'title' => 'Ticket has been activated',
-                                    'owner' => auth()->user()->email,
-                                    'work_order' => null,
-                                    'sub_work_order' => null,
-                                    'status' => $record->status,
-                                    'handler' => $record->handler,
-                                    'created_at' => now(),
-                                ]);
-                                $record->ticketHistory()->save($ticketHistory);
-                                $record->save();
-                                Notification::make()
-                                    ->title('Ticket has been activated')
-                                    ->success()
-                                    ->send();
-                            });
+                            $record->update(
+                                [
+                                    'canceled_at' => null,
+                                ]
+                            );
+                            $record->ticketHistory()->save(new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Ticket has been activated',
+                                'owner' => auth()->user()->email,
+                                'work_order' => null,
+                                'sub_work_order' => null,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]));
+                            Notification::make()
+                                ->title('Ticket has been activated')
+                                ->success()
+                                ->send();
                         }),
 
                     // NOTE: archive_ticket action
@@ -485,21 +484,21 @@ class TicketResource extends Resource implements HasShieldPermissions
                             return is_null($record->deleted_at) && ($record->status == TicketStatus::CLOSED->value || !is_null($record->canceled_at));
                         })
                         ->action(function (Ticket $record): void {
-                            DB::transaction(function () use ($record) {
-                                $record->deleted_at = now();
-                                $ticketHistory = new TicketHistory([
-                                    'ticket_id' => $record->id,
-                                    'title' => 'Ticket has been archived',
-                                    'owner' => auth()->user()->email,
-                                    'work_order' => null,
-                                    'sub_work_order' => null,
-                                    'status' => $record->status,
-                                    'handler' => $record->handler,
-                                    'created_at' => now(),
-                                ]);
-                                $record->ticketHistory()->save($ticketHistory);
-                                $record->save();
-                            });
+                            $record->update(
+                                [
+                                    'deleted_at' => now(),
+                                ]
+                            );
+                            $record->ticketHistory()->save(new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => 'Ticket has been archived',
+                                'owner' => auth()->user()->email,
+                                'work_order' => null,
+                                'sub_work_order' => null,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]));
                             Notification::make()
                                 ->title('Ticket has been archived')
                                 ->success()
@@ -531,47 +530,39 @@ class TicketResource extends Resource implements HasShieldPermissions
                             }
                         })
                         ->action(function ($record) {
-                            try {
-                                DB::transaction(function () use ($record) {
-                                    if (auth()->user()->level_id == 1) {
-                                        $record->customer()->attach(auth()->user()->id);
-                                    }
-                                    if (auth()->user()->level_id == 2) {
-                                        $record->technicalSupport()->attach(auth()->user()->id);
-                                    }
-                                    if (auth()->user()->level_id == 3) {
-                                        $record->HighTechnicalSupport()->attach(auth()->user()->id);
-                                    }
-                                    if (auth()->user()->level_id == 4) {
-                                        $record->externalTechnicalSupport()->attach(auth()->user()->id);
-                                    }
-                                    $ticketHistory = new TicketHistory([
-                                        'ticket_id' => $record->id,
-                                        'title' => auth()->user()->email . 'is self assigned to Ticket',
-                                        'owner' => auth()->user()->email,
-                                        'work_order' => null,
-                                        'sub_work_order' => null,
-                                        'status' => $record->status,
-                                        'handler' => $record->handler,
-                                        'created_at' => now(),
-                                    ]);
-                                    $record->ticketHistory()->save($ticketHistory);
-                                    if (is_null($record->start_at)) {
-                                        $record->start_at = now();
-                                    }
-                                    $record->save();
-                                });
-                                Notification::make()
-                                    ->title('Ticket assigned to you')
-                                    ->success()
-                                    ->send();
-                            } catch (Exception $e) {
-                                Notification::make()
-                                    ->title('Error assigning ticket')
-                                    ->body($e->getMessage())
-                                    ->danger()
-                                    ->send();
+                            if (auth()->user()->level_id == 1) {
+                                $record->customer()->attach(auth()->user()->id);
                             }
+                            if (auth()->user()->level_id == 2) {
+                                $record->technicalSupport()->attach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 3) {
+                                $record->HighTechnicalSupport()->attach(auth()->user()->id);
+                            }
+                            if (auth()->user()->level_id == 4) {
+                                $record->externalTechnicalSupport()->attach(auth()->user()->id);
+                            }
+                            $record->ticketHistory()->save(new TicketHistory([
+                                'ticket_id' => $record->id,
+                                'title' => auth()->user()->email . 'is self assigned to Ticket',
+                                'owner' => auth()->user()->email,
+                                'work_order' => null,
+                                'sub_work_order' => null,
+                                'status' => $record->status,
+                                'handler' => $record->handler,
+                                'created_at' => now(),
+                            ]));
+                            if (is_null($record->start_at)) {
+                                $record->update(
+                                    [
+                                        'start_at' => now(),
+                                    ]
+                                );
+                            }
+                            Notification::make()
+                                ->title('Ticket assigned to you')
+                                ->success()
+                                ->send();
                         }),
                 ])
                     ->button()
