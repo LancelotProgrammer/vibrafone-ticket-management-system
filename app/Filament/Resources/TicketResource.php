@@ -1311,9 +1311,15 @@ class TicketResource extends Resource implements HasShieldPermissions
                     }
                 }),
             Column::make('escalated_to_high_technical_support_at')
+                ->heading('escalated_to_SL2_at')
                 ->getStateUsing(function ($record) {
                     return $record->escalated_to_high_technical_support_at ?? 'No Date';
                 }),
+            // Column::make('escalated_to_external_technical_support_at')
+            //     ->heading('escalated_to_SL3_at')
+            //     ->getStateUsing(function ($record) {
+            //         return $record->escalated_to_external_technical_support_at ?? 'No Date';
+            //     }),
             Column::make('troubleshooting_activity_for_customer')
                 ->getStateUsing(function ($record) {
                     return $record->ticketHistory->where(
@@ -1322,6 +1328,7 @@ class TicketResource extends Resource implements HasShieldPermissions
                     )->first()?->created_at ?? 'No Date';
                 }),
             Column::make('troubleshooting_activity_for_technical_support')
+                ->heading('troubleshooting_activity_for_SL1')
                 ->getStateUsing(function ($record) {
                     return $record->ticketHistory->where(
                         'work_order',
